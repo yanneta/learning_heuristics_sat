@@ -191,18 +191,16 @@ def train(ls, optimizer, scheduler, data, config):
                 torch.save(ls.policy, join(config['dir'], 'model_best.pth'))
                 stats = new_stats
 
+
 def main():
     config, device = util.setup()
     logger.setLevel(getattr(logging, config['log_level'].upper()))
-    gnn = import_module('gnn' if config['mlp_arch'] else 'gnn_old')
-
-    model = gnn.ReinforcePolicy
+    
+    policy =  nn.Sequential(nn.Linear(2, 5), nn.ReLU(), nn.Linear(5, 1))
 
     if config['model_path']:
         logger.info('Loading model parameters from {}'.format(config['model_path']))
         policy = torch.load(config['model_path']).to(device)
-    else:
-        policy = model(3, config['gnn_hidden_size'], config['readout_hidden_size']).to(device)
     optimizer = getattr(optim, config['optimizer'])(policy.parameters(), lr=config['lr'])
     scheduler = optim.lr_scheduler.MultiStepLR(
         optimizer, milestones=config['lr_milestones'], gamma=config['lr_decay']
