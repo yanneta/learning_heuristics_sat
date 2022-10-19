@@ -73,6 +73,8 @@ def main():
     if args.expr == "kclique/3-5-0.2/":
         generate_kclique(N, 5, 0.2, 3, 0) 
 
+    if args.expr == "kclique/3-20-0.05/":
+        generate_kclique(N, 20, 0.05, 3, 0)
     #python code/kclique.py data/kclique/5-0.2/ 2000 5 0.2 3 0 &
     #python code/kclique.py data/kclique/10-0.1/ 2000 10 0.1 3 0 &
     #python code/kclique.py data/kclique/15-0.066/ 2000 15 0.066 3 0 &
