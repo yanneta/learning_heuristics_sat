@@ -41,6 +41,17 @@ def generate_randksat(N, k, n, m, i0):
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'randkcnf', str(k), str(n), str(m)]
         create_sat_problem(filename, call_list)
 
+def generate_kcover(N, n, p, k, i0=0):
+    """
+    n number of nodes
+    p probability of an edge
+    k size of the cover
+    """
+    for i in range(N):
+        filename = 'kcover_k{}_n{}_p{}_{}.cnf'.format(k, n, p, i0+i)
+        call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'kcover', '--gnp', str(n), str(p), str(k)]
+        create_sat_problem(filename, call_list)
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -56,6 +67,16 @@ def main():
     os.chdir(path)
 
     N=2000
+
+    # kcover experiments
+
+    if args.expr == "kcover/2-5-0.5/":
+        generate_kcover(N, 5, 0.5, 2, 0) 
+    
+    #python code/kcover.py data/kcover/3-7-0.5/ 2000 7 0.5 3 0 &
+    #python code/kcover.py data/kcover/4-8-0.5/ 2000 8 0.5 4 0 &
+    #python code/kcover.py data/kcover/5-9-0.5/ 2000 9 0.5 5 0 &
+
 
     # random k-SAT experiments
     if args.expr == "rand3sat/5-21/":
