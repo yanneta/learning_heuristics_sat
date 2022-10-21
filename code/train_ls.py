@@ -78,7 +78,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_")
-    log_file = "logs/" + basename + "d_" +  str(args.discount) + ".log"
+    log_file = "logs/" + basename + "_d_" +  str(args.discount) + ".log"
     print(log_file)
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
@@ -110,7 +110,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_tries', type=int, default=10)
     parser.add_argument('--max_flips', type=int, default=10000)
     parser.add_argument('--p', type=float, default=0.5)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=15)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--discount', type=float, default=0.5)
     args = parser.parse_args()
