@@ -189,11 +189,14 @@ class WalkSATLN:
                 loss.backward()
                 optimizer.step()
                 losses.append(loss.item())
+                mean_losses.append(loss.item())
             all_flips.append(flips)
             all_backflips.append(backflips)
-            mean_losses.append(loss.item())
             accuracy.append(acc)
-        return all_flips, all_backflips, np.mean(mean_losses), np.mean(accuracy) 
+        mean_loss = -1
+        if mean_losses:
+            mean_loss = np.mean(mean_losses)
+        return all_flips, all_backflips, mean_loss, np.mean(accuracy) 
 
 
 def change_lr(optimizer, lr):
