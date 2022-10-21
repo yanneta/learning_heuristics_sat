@@ -12,48 +12,6 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
-class Net(nn.Module):
-    def __init__(self, input_features=4, hidden=5):
-        super(Net, self).__init__()
-        self.lin = nn.Linear(input_features, hidden)
-        self.dropout = nn.Dropout(0.5)
-        self.lin2 = nn.Linear(hidden, 1)
-    def forward(self, x):
-        x = self.lin(x)
-        x = F.relu(self.dropout(x))
-        x = self.lin2(x)
-        return x
-
-def init_net(model):
-    with torch.no_grad():
-        model.lin.weight[0, 0] = 10
-        model.lin2.weight[0, 0] = -1
-
-class Net2(nn.Module):
-    def __init__(self, input_features=4):
-        super(Net2, self).__init__()
-        self.lin = nn.Linear(input_features, 1)
-    def forward(self, x):
-        x = self.lin(x)
-        return x
-
-def init_net2(policy, input_features=4):
-    with torch.no_grad():
-        policy.lin.weight[0, 0] = -1
-        for i in range(1, input_features):
-            policy.lin.weight[0, i] = 0
-        policy.lin.bias[0] = 0
-
-def load_dir(path):
-    data = []
-    for filename in os.listdir(path):
-        name, ext = os.path.splitext(filename)
-        if ext != '.cnf':
-            continue
-        f = CNF.from_file(os.path.join(path, filename))
-        data.append(f)
-    return data
-
 class WalkSATLN:
     def __init__(self, policy, max_tries, max_flips, p=0.5, discount=0.5):
         self.policy = policy
@@ -61,8 +19,6 @@ class WalkSATLN:
         self.max_flips = max_flips
         self.p = p
         self.discount = discount
-        self.flips_to_solution = []
-        self.backflips = []
         self.unsat_clauses = []
         self.age = []
         self.last_10 = []
@@ -142,7 +98,7 @@ class WalkSATLN:
         flips = 0
         flipped = set()
         backflipped = 0
-        while flips < max_flips:
+        while flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             sat = not unsat_clause_indices
             if sat:
@@ -198,29 +154,33 @@ class WalkSATLN:
             num_sols += sat    
         if losses:
             losses = torch.stack(losses).sum()  
-        return np.mean(flips), np.mean(backflips), losses, num_sols/self.max_tries
+        return flips, backflips, losses, num_sols/self.max_tries
     
     
     def evaluate(self, data, walksat=False):
-        mean_flips = []
-        mean_backflips = []
+        all_flips = []
+        all_backflips = []
         mean_losses = []
         accuracy = []
         self.policy.eval()
         for f in data:
             flips, backflips, losses, acc = self.generate_episodes(f, walksat)
-            mean_flips.append(flips)
-            mean_backflips.append(backflips)
+            all_flips.append(flips)
+            all_backflips.append(backflips)
             if losses:
                 mean_losses.append(losses.item())
             accuracy.append(acc)
             mean_loss = None
             if mean_losses:
                 mean_loss = np.mean(mean_losses)
-        print(np.mean(mean_flips), np.mean(mean_backflips), mean_loss, np.mean(accuracy))
+        return all_flips, all_backflips,  mean_loss, np.mean(accuracy)
         
     def train_epoch(self, optimizer, data):
         losses = []
+        all_flips = []
+        all_backflips = []
+        mean_losses = []
+        accuracy = []
         for f in data:
             self.policy.train()
             flips, backflips, loss, acc = self.generate_episodes(f)
@@ -229,7 +189,11 @@ class WalkSATLN:
                 loss.backward()
                 optimizer.step()
                 losses.append(loss.item())
-        print(np.mean(losses))
+            all_flips.append(flips)
+            all_backflips.append(backflips)
+            mean_losses.append(loss.item())
+            accuracy.append(acc)
+        return all_flips, all_backflips, np.mean(mean_losses), np.mean(accuracy) 
 
 
 def change_lr(optimizer, lr):

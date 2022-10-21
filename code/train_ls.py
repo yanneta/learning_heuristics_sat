@@ -1,0 +1,117 @@
+import argparse
+import logging
+import os
+import pdb
+import random
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
+
+
+from cnf import CNF
+from local_search import WalkSATLN
+
+
+class Net(nn.Module):
+    def __init__(self, input_features=4, hidden=5):
+        super(Net, self).__init__()
+        self.lin = nn.Linear(input_features, hidden)
+        self.dropout = nn.Dropout(0.5)
+        self.lin2 = nn.Linear(hidden, 1)
+    def forward(self, x):
+        x = self.lin(x)
+        x = F.relu(self.dropout(x))
+        x = self.lin2(x)
+        return x
+
+def init_net(model):
+    with torch.no_grad():
+        model.lin.weight[0, 0] = 10
+        model.lin2.weight[0, 0] = -1
+
+class Net2(nn.Module):
+    def __init__(self, input_features=4):
+        super(Net2, self).__init__()
+        self.lin = nn.Linear(input_features, 1)
+    def forward(self, x):
+        x = self.lin(x)
+        return x
+
+def init_net2(policy, input_features=4):
+    with torch.no_grad():
+        policy.lin.weight[0, 0] = -1
+        for i in range(1, input_features):
+            policy.lin.weight[0, i] = 0
+        policy.lin.bias[0] = 0
+
+
+def load_dir(path):
+    data = []
+    for filename in os.listdir(path):
+        name, ext = os.path.splitext(filename)
+        if ext != '.cnf':
+            continue
+        f = CNF.from_file(os.path.join(path, filename))
+        data.append(f)
+    return data
+
+def split_data(data):
+    logging.info("length of data is " + str(len(data)))
+    train_ds = data[:1500]
+    val_ds = data[1500:1700]
+    test_ds = data[1700:]
+    return train_ds, val_ds, test_ds
+
+def to_log(flips, backflips,  loss, accuracy, comment):
+    if loss is None:
+        loss = -1
+    text = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'.format(
+            comment, np.median(flips), np.mean(flips), np.median(backflips), np.mean(backflips), 100 * accuracy, loss)
+    logging.info(text)
+
+
+def main(args):
+    if args.seed > -1:
+        random.seed(args.seed)
+
+    basename = args.dir_path.replace("../", "").replace("/","_")
+    log_file = "logs/" + basename + "d_" +  str(args.discount) + ".log"
+    print(log_file)
+
+    logging.basicConfig(filename=log_file, level=logging.INFO)
+
+    data = load_dir(args.dir_path)
+    train_ds, val_ds, test_ds = split_data(data)
+
+    policy = Net()
+    optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
+
+    ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
+    flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
+    to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
+    flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
+    to_log(flips, backflips,  loss, accuracy, comment="EVAL No Train")
+    for i in range(1, args.epochs + 1):
+        print("epoch ", i)
+        flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
+        to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
+        flips, backflips, loss, accuracy = ls.evaluate(val_ds)
+        to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
+    print("done")
+    
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-d', '--dir_path', type=str)
+    parser.add_argument('-m', '--model_path', type=str)
+    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--max_tries', type=int, default=10)
+    parser.add_argument('--max_flips', type=int, default=10000)
+    parser.add_argument('--p', type=float, default=0.5)
+    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--discount', type=float, default=0.5)
+    args = parser.parse_args()
+    main(args)
