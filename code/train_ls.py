@@ -79,10 +79,10 @@ def to_log(flips, backflips,  loss, accuracy, comment, CI=False):
     logging.info(text)
     if CI:
         ci_means, ci_median = compute_mean_median_CI(flips)
-        text = 'CI means FLIPS {:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
+        text = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
         ci_means, ci_median = compute_mean_median_CI(backflips)
-        text = 'CI means BACKFLIPS {:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
+        text = 'CI means BACKFLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
 
 
@@ -127,7 +127,10 @@ def main(args):
     to_log(flips, backflips,  loss, accuracy, comment="TEST", CI=True)
     logging.info("Best epoch " + str(best_epoch))
     print("Best epoch", best_epoch)
-    
+   
+    flips, backflips,  loss, accuracy = ls.evaluate(test_ds, walksat=True)
+    to_log(flips, backflips,  loss, accuracy, comment="TEST Walksat", CI=True)
+     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dir_path', type=str)
