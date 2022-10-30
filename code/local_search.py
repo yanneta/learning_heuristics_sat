@@ -140,21 +140,21 @@ class WalkSATLN:
         return -torch.mean(p_rewards[torch.from_numpy(mask).to(log_probs.device)] * log_probs)
 
     def generate_episodes(self, f, walksat=False):
-        flips_stats = []
         losses = []
-        backflips = []
+        all_backflips = []
+        all_flips = []
         num_sols = 0
         for i in range(self.max_tries):
-            sat, flips, backflipped, log_probs = self.generate_episode_reinforce(f, walksat)
-            flips_stats.append(flips)
-            backflips.append(backflipped)
+            sat, flips, backflips, log_probs = self.generate_episode_reinforce(f, walksat)
+            all_flips.append(flips)
+            all_backflips.append(backflips)
             if sat and flips > 0 and not all(map(lambda x: x is None, log_probs)):
                 loss = self.reinforce_loss(log_probs)
                 losses.append(loss)
             num_sols += sat    
         if losses:
             losses = torch.stack(losses).sum()  
-        return flips, backflips, losses, num_sols/self.max_tries
+        return all_flips, all_backflips, losses, num_sols/self.max_tries
     
     
     def evaluate(self, data, walksat=False):
@@ -173,6 +173,8 @@ class WalkSATLN:
             mean_loss = None
             if mean_losses:
                 mean_loss = np.mean(mean_losses)
+        all_flips = np.array(all_flips).reshape(-1)
+        all_backflips = np.array(all_backflips).reshape(-1)
         return all_flips, all_backflips,  mean_loss, np.mean(accuracy)
         
     def train_epoch(self, optimizer, data):
