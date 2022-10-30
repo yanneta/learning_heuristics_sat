@@ -65,20 +65,34 @@ def split_data(data):
     test_ds = data[1700:]
     return train_ds, val_ds, test_ds
 
-def to_log(flips, backflips,  loss, accuracy, comment):
+def compute_mean_median_CI(values):
+    N = len(values)
+    medians = [np.median(np.random.choice(values, N)) for i in range(1000)]
+    means = [np.mean(np.random.choice(values, N)) for i in range(1000)]
+    return np.quantile(means, q=[.25, .975]), np.quantile(medians, q=[.25, .975])
+
+def to_log(flips, backflips,  loss, accuracy, comment, CI=False):
     if loss is None:
         loss = -1
     text = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'.format(
             comment, np.median(flips), np.mean(flips), np.median(backflips), np.mean(backflips), 100 * accuracy, loss)
     logging.info(text)
+    if CI:
+        ci_means, ci_median = compute_mean_median_CI(flips)
+        text = 'CI means FLIPS {:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0]))
+        logging.info(text)
+        ci_means, ci_median = compute_mean_median_CI(backflips)
+        text = 'CI means BACKFLIPS {:.2f}, {:.2f}, {:.2f}, {:.2f}'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0]))
+        logging.info(text)
 
 
 def main(args):
     if args.seed > -1:
         random.seed(args.seed)
 
-    basename = args.dir_path.replace("../", "").replace("/","_")
-    log_file = "logs/" + basename + "_d_" +  str(args.discount) + ".log"
+    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount)
+    log_file = "logs/" + basename +  ".log"
+    model_file = "models/" + basename + ".pt" 
     print(log_file)
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
@@ -94,13 +108,23 @@ def main(args):
     to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
     to_log(flips, backflips,  loss, accuracy, comment="EVAL No Train")
+    best_median_flips = np.median(flips)
+    best_epoch = 0
+    torch.save(policy.state_dict(), model_file)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
         flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
         to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
         to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
-    print("done")
+        if best_median_flips > np.median(flips):
+            torch.save(policy.state_dict(), model_file)
+            best_median_flips = np.median(flips)
+            best_epoch = i
+    flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
+    to_log(flips, backflips,  loss, accuracy, comment="TEST", CI=True)
+    logging.info("Best epoch " + str(best_epoch))
+    print("Best epoch", best_epoch)
     
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
