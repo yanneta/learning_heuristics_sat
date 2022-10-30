@@ -81,7 +81,7 @@ class WalkSATLN:
                 min_breaking_lits = [literal]
             elif broken_count == broken_min:
                 min_breaking_lits.append(literal)
-        return abs(random.choice(min_breaking_lits))
+        return random.choice(min_breaking_lits)
     
     def reinforce_step(self, f, unsat_clause):
         x = self.stats_per_clause(f, unsat_clause)
