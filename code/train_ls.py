@@ -121,6 +121,8 @@ def main(args):
             torch.save(policy.state_dict(), model_file)
             best_median_flips = np.median(flips)
             best_epoch = i
+    # Test
+    ls.policy.load_state_dict(torch.load(model_file))
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
     to_log(flips, backflips,  loss, accuracy, comment="TEST", CI=True)
     logging.info("Best epoch " + str(best_epoch))
