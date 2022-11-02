@@ -139,12 +139,12 @@ class WalkSATLN:
         p_rewards = self.discount ** torch.arange(T - 1, -1, -1, dtype=torch.float32, device=log_probs.device)
         return -torch.mean(p_rewards[torch.from_numpy(mask).to(log_probs.device)] * log_probs)
 
-    def generate_episodes(self, f, walksat=False):
+    def generate_episodes(self, list_f, walksat=False):
         losses = []
         all_backflips = []
         all_flips = []
         num_sols = 0
-        for i in range(self.max_tries):
+        for f in list_f:
             sat, flips, backflips, log_probs = self.generate_episode_reinforce(f, walksat)
             all_flips.append(flips)
             all_backflips.append(backflips)
@@ -164,7 +164,8 @@ class WalkSATLN:
         accuracy = []
         self.policy.eval()
         for f in data:
-            flips, backflips, losses, acc = self.generate_episodes(f, walksat)
+            list_f = [f for i in range(self.max_tries)]
+            flips, backflips, losses, acc = self.generate_episodes(list_f, walksat)
             all_flips.append(flips)
             all_backflips.append(backflips)
             if losses:
@@ -183,9 +184,12 @@ class WalkSATLN:
         all_backflips = []
         mean_losses = []
         accuracy = []
-        for f in data:
+        np.random.shuffle(data)
+        k = self.max_tries
+        batches = [data[i:i+k] for i in range(0, len(data), k)]
+        for list_f in batches:
             self.policy.train()
-            flips, backflips, loss, acc = self.generate_episodes(f)
+            flips, backflips, loss, acc = self.generate_episodes(list_f)
             if acc > 0:
                 optimizer.zero_grad()
                 loss.backward()
