@@ -52,6 +52,21 @@ def generate_kclique(N, n, p, k, i0):
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'kclique', str(k), 'gnp', str(n), str(p)]
         create_sat_problem(filename, call_list)
 
+#cnfgen -q -o tmp.cnf domset 4 gnp 12 0.2
+
+def generate_domeset(N, n, p, k, i0):
+    """
+    n number of nodes
+    p probability of an edge
+    k size of the dominating set
+    """
+    for i in range(N):
+        filename = 'domset_k{}_n{}_p{}_{}.cnf'.format(k, n, p, i0+i)
+        call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'domset', str(k), 'gnp', str(n), str(p)]
+        create_sat_problem(filename, call_list)
+
+
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -68,8 +83,12 @@ def main():
 
     N=2000
 
-    # kcover experiments
-
+    if args.expr == "domset/3-9-0.2/"
+        generate_domeset(N, 9, 0.2, 3, 0)
+    
+     if args.expr == "domset/4-12-0.2/"
+        generate_domeset(N, 12, 0.2, 4, 0)
+    
     if args.expr == "kclique/3-5-0.2/":
         generate_kclique(N, 5, 0.2, 3, 0) 
 
