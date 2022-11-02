@@ -83,10 +83,10 @@ def main():
 
     N=2000
 
-    if args.expr == "domset/3-9-0.2/"
+    if args.expr == "domset/3-9-0.2/":
         generate_domeset(N, 9, 0.2, 3, 0)
     
-     if args.expr == "domset/4-12-0.2/"
+    if args.expr == "domset/4-12-0.2/":
         generate_domeset(N, 12, 0.2, 4, 0)
     
     if args.expr == "kclique/3-5-0.2/":
@@ -94,12 +94,9 @@ def main():
 
     if args.expr == "kclique/3-20-0.05/":
         generate_kclique(N, 20, 0.05, 3, 0)
-    #python code/kclique.py data/kclique/5-0.2/ 2000 5 0.2 3 0 &
-    #python code/kclique.py data/kclique/10-0.1/ 2000 10 0.1 3 0 &
     #python code/kclique.py data/kclique/15-0.066/ 2000 15 0.066 3 0 &
     #python code/kclique.py data/kclique/20-0.05/ 2000 20 0.05 3 0 &
     
-
     # random k-SAT experiments
     if args.expr == "rand3sat/5-21/":
         generate_randksat(N, 3, 5, 21, 0)
