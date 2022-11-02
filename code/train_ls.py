@@ -90,7 +90,7 @@ def main(args):
     if args.seed > -1:
         random.seed(args.seed)
 
-    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount)
+    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) + "v2"
     log_file = "logs/" + basename +  ".log"
     model_file = "models/" + basename + ".pt" 
     print(log_file)
