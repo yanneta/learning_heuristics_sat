@@ -117,11 +117,12 @@ def main(args):
         flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
         to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
-        to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
-        if best_median_flips > np.median(flips):
-            torch.save(policy.state_dict(), model_file)
-            best_median_flips = np.median(flips)
-            best_epoch = i
+        if i%5 == 0 and i > 0:
+            to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
+            if best_median_flips > np.median(flips):
+                torch.save(policy.state_dict(), model_file)
+                best_median_flips = np.median(flips)
+                best_epoch = i
     # Test
     ls.policy.load_state_dict(torch.load(model_file))
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
