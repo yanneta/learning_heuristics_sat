@@ -90,7 +90,8 @@ def main(args):
     if args.seed > -1:
         random.seed(args.seed)
 
-    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) + "_e40"
+    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
+    basename += "_e" + str(args.epochs)
     log_file = "logs/" + basename +  ".log"
     model_file = "models/" + basename + ".pt" 
     print(log_file)
@@ -139,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_tries', type=int, default=10)
     parser.add_argument('--max_flips', type=int, default=10000)
     parser.add_argument('--p', type=float, default=0.5)
-    parser.add_argument('--epochs', type=int, default=40)
+    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--discount', type=float, default=0.5)
     args = parser.parse_args()
