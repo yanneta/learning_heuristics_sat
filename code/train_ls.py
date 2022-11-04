@@ -13,7 +13,7 @@ import torch.optim as optim
 
 from cnf import CNF
 from local_search import WalkSATLN
-
+from warm_up import WarmUP
 
 class Net(nn.Module):
     def __init__(self, input_features=4, hidden=5):
@@ -92,6 +92,8 @@ def main(args):
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
     basename += "_e" + str(args.epochs)
+    if args.warm_up:
+         basename += "_wup"
     log_file = "logs/" + basename +  ".log"
     model_file = "models/" + basename + ".pt" 
     print(log_file)
@@ -103,6 +105,12 @@ def main(args):
 
     policy = Net()
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
+
+    if args.warm_up:
+        wup = WarmUP(policy)
+        for i in range(5):
+            wup.train_epoch(optimizer, train_ds)
+
 
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
@@ -144,5 +152,6 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--discount', type=float, default=0.5)
+    parser.add_argument('--warm_up', type=bool, default=True)
     args = parser.parse_args()
     main(args)
