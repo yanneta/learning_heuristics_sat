@@ -7,6 +7,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
+import numpy as np
+
 
 class WarmUP:
     def __init__(self, policy, max_flips=10000, p=0.5):

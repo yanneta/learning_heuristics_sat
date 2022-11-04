@@ -19,18 +19,13 @@ class Net(nn.Module):
     def __init__(self, input_features=4, hidden=5):
         super(Net, self).__init__()
         self.lin = nn.Linear(input_features, hidden)
-        self.dropout = nn.Dropout(0.5)
+        self.dropout = nn.Dropout(0.3)
         self.lin2 = nn.Linear(hidden, 1)
     def forward(self, x):
         x = self.lin(x)
         x = F.relu(self.dropout(x))
         x = self.lin2(x)
         return x
-
-def init_net(model):
-    with torch.no_grad():
-        model.lin.weight[0, 0] = 10
-        model.lin2.weight[0, 0] = -1
 
 class Net2(nn.Module):
     def __init__(self, input_features=4):
@@ -39,14 +34,6 @@ class Net2(nn.Module):
     def forward(self, x):
         x = self.lin(x)
         return x
-
-def init_net2(policy, input_features=4):
-    with torch.no_grad():
-        policy.lin.weight[0, 0] = -1
-        for i in range(1, input_features):
-            policy.lin.weight[0, i] = 0
-        policy.lin.bias[0] = 0
-
 
 def load_dir(path):
     data = []
@@ -65,6 +52,10 @@ def split_data(data):
     test_ds = data[1700:]
     return train_ds, val_ds, test_ds
 
+def change_lr(optimizer, lr):
+    for g in optimizer.param_groups:
+        g['lr'] = lr
+
 def compute_mean_median_CI(values):
     N = len(values)
     medians = [np.median(np.random.choice(values, N)) for i in range(1000)]
@@ -74,15 +65,18 @@ def compute_mean_median_CI(values):
 def to_log(flips, backflips,  loss, accuracy, comment, CI=False):
     if loss is None:
         loss = -1
-    text = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'.format(
-            comment, np.median(flips), np.mean(flips), np.median(backflips), np.mean(backflips), 100 * accuracy, loss)
+    formatting = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'
+    text = formatting.format(comment, np.median(flips), np.mean(flips), np.median(backflips), \
+        np.mean(backflips), 100 * accuracy, loss)
     logging.info(text)
     if CI:
         ci_means, ci_median = compute_mean_median_CI(flips)
-        text = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
+        formatting = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
+        text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
         ci_means, ci_median = compute_mean_median_CI(backflips)
-        text = 'CI means BACKFLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
+        formatting = 'CI means BACKFLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
+        text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
 
 
@@ -111,12 +105,13 @@ def main(args):
         for i in range(5):
             wup.train_epoch(optimizer, train_ds)
 
-
+    change_lr(optimizer, args.lr/5)
+    
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
     to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
-    to_log(flips, backflips,  loss, accuracy, comment="EVAL No Train")
+    to_log(flips, backflips,  loss, accuracy, comment="EVAL No Train/ WarmUP")
     best_median_flips = np.median(flips)
     best_epoch = 0
     torch.save(policy.state_dict(), model_file)
