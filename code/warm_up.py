@@ -28,7 +28,10 @@ class WarmUP:
                 if self.sol[abs(literal)] == literal:
                     true_lit_count[index] += 1
         return true_lit_count
-    
+
+    def normalize_breaks(self, x):
+        return np.minimum(x, 5)/5
+
     def do_flip(self, literal, occur_list):
         for i in occur_list[literal]:
             self.true_lit_count[i] += 1
@@ -49,6 +52,7 @@ class WarmUP:
                     broken_count += 1
             breaks[i] = broken_count
             self.break_histo[broken_count] +=1
+        breaks = self.normalize_breaks(breaks)
         in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
         age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
         in_last_5 = np.array([int(v in last_5) for v in variables]) 

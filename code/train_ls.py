@@ -101,7 +101,7 @@ def main(args):
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up:
-        wup = WarmUP(policy)
+        wup = WarmUP(policy, max_flips=5000)
         for i in range(5):
             wup.train_epoch(optimizer, train_ds)
 
