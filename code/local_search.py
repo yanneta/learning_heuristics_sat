@@ -13,7 +13,7 @@ import torch.optim as optim
 from torch.distributions import Categorical
 
 class WalkSATLN:
-    def __init__(self, policy, max_tries, max_flips, p=0.5, discount=0.5):
+    def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
         self.policy = policy
         self.max_tries = max_tries
         self.max_flips = max_flips
