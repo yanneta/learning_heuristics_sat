@@ -8,76 +8,13 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 import numpy as np
+from local_search import SATLearner
 
-
-class WarmUP:
+class WarmUP(SATLearner):
     def __init__(self, policy, max_flips=10000, p=0.5):
-        self.policy = policy
-        self.max_flips = max_flips
-        self.p = p
-        self.sol = []
-        self.age = []
-        self.last_10 = []
+        super().__init__(policy, max_flips, p)
         self.break_histo = np.zeros(1000)
         
-    def compute_true_lit_count(self, clauses):
-        n_clauses = len(clauses)
-        true_lit_count = [0] * n_clauses
-        for index in range(n_clauses):
-            for literal in clauses[index]:
-                if self.sol[abs(literal)] == literal:
-                    true_lit_count[index] += 1
-        return true_lit_count
-
-    def normalize_breaks(self, x):
-        return np.minimum(x, 5)/5
-
-    def do_flip(self, literal, occur_list):
-        for i in occur_list[literal]:
-            self.true_lit_count[i] += 1
-        for i in occur_list[-literal]:
-            self.true_lit_count[i] -= 1
-        self.sol[abs(literal)] *= -1
-        
-    def stats_per_clause(self, f, unsat_clause):
-        """ computes the featutes needed for the model
-        """ 
-        variables = [abs(v) for v in unsat_clause]
-        breaks = np.zeros(len(variables))
-        last_5 = self.last_10[:5]
-        for i, literal in enumerate(unsat_clause):
-            broken_count = 0
-            for index in f.occur_list[-literal]:
-                if self.true_lit_count[index] == 1:
-                    broken_count += 1
-            breaks[i] = broken_count
-            self.break_histo[broken_count] +=1
-        breaks = self.normalize_breaks(breaks)
-        #in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
-        age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
-        #in_last_5 = np.array([int(v in last_5) for v in variables]) 
-        #np.stack([breaks, in_last_10, in_last_5, age], axis=1)
-        return np.stack([breaks, age], axis=1)
-    
-    def walksat_step(self, f, unsat_clause):
-        """Returns chosen literal"""
-        broken_min = float('inf')
-        min_breaking_lits = []
-        for i, literal in enumerate(unsat_clause):
-            broken_count = 0
-            for index in f.occur_list[-literal]:
-                if self.true_lit_count[index] == 1:
-                    broken_count += 1
-                if broken_count > broken_min:
-                    break
-            if broken_count < broken_min:
-                broken_min = broken_count
-                min_breaking_lits = [i]
-            elif broken_count == broken_min:
-                min_breaking_lits.append(i)
-        index = random.choice(min_breaking_lits)
-        return index, unsat_clause[index]
-    
     def select_variable_reinforce(self, x, f, unsat_clause):
         index, lit = self.walksat_step(f, unsat_clause)
         logit = self.policy(x)

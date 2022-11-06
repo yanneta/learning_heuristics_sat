@@ -12,18 +12,16 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch.distributions import Categorical
 
-class WalkSATLN:
-    def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
+
+class SATLearner:
+    def __init__(self, policy, max_flips=1000, p=0.5):
         self.policy = policy
-        self.max_tries = max_tries
         self.max_flips = max_flips
         self.p = p
-        self.discount = discount
-        self.unsat_clauses = []
         self.age = []
         self.last_10 = []
         self.sol = []
-        
+
     def compute_true_lit_count(self, clauses):
         n_clauses = len(clauses)
         true_lit_count = [0] * n_clauses
@@ -32,14 +30,7 @@ class WalkSATLN:
                 if self.sol[abs(literal)] == literal:
                     true_lit_count[index] += 1
         return true_lit_count
-    
-    def select_variable_reinforce(self, x):
-        logit = self.policy(x)
-        prob = F.softmax(logit, dim=0)
-        dist = Categorical(prob.view(-1))
-        v = dist.sample()
-        return v, dist.log_prob(v)
-    
+
     def do_flip(self, literal, occur_list):
         for i in occur_list[literal]:
             self.true_lit_count[i] += 1
@@ -52,7 +43,7 @@ class WalkSATLN:
 
     def stats_per_clause(self, f, unsat_clause):
         """ computes the featutes needed for the model
-        """ 
+        """
         r = f.n_variables/ len(f.clauses)
         variables = [abs(v) for v in unsat_clause]
         breaks = np.zeros(len(variables))
@@ -70,12 +61,12 @@ class WalkSATLN:
         #x = np.stack([breaks, in_last_10, in_last_5, age], axis=1)
         x = np.stack([breaks, age], axis=1)
         return x
-    
+
     def walksat_step(self, f, unsat_clause):
         """Returns chosen literal"""
         broken_min = float('inf')
         min_breaking_lits = []
-        for literal in unsat_clause:
+        for i, literal in enumerate(unsat_clause):
             broken_count = 0
             for index in f.occur_list[-literal]:
                 if self.true_lit_count[index] == 1:
@@ -84,10 +75,26 @@ class WalkSATLN:
                     break
             if broken_count < broken_min:
                 broken_min = broken_count
-                min_breaking_lits = [literal]
+                min_breaking_lits = [i]
             elif broken_count == broken_min:
-                min_breaking_lits.append(literal)
-        return random.choice(min_breaking_lits)
+                min_breaking_lits.append(i)
+        index = random.choice(min_breaking_lits)
+        return index, unsat_clause[index]
+
+
+class WalkSATLN(SATLearner):
+    def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
+        super().__init__(policy, max_flips, p)
+        self.max_tries = max_tries
+        self.discount = discount
+        self.unsat_clauses = []
+        
+    def select_variable_reinforce(self, x):
+        logit = self.policy(x)
+        prob = F.softmax(logit, dim=0)
+        dist = Categorical(prob.view(-1))
+        v = dist.sample()
+        return v, dist.log_prob(v)
     
     def reinforce_step(self, f, unsat_clause):
         x = self.stats_per_clause(f, unsat_clause)
@@ -115,17 +122,17 @@ class WalkSATLN:
                 literal = random.choice(unsat_clause)
             else:
                 if walksat:
-                    literal = self.walksat_step(f, unsat_clause)   
+                    _, literal = self.walksat_step(f, unsat_clause)   
                 else:
                     literal, log_prob = self.reinforce_step(f, unsat_clause)
-                v = abs(literal)
-                if v not in flipped:
-                    flipped.add(v)
-                else:
-                    backflipped += 1
-                self.last_10.insert(0, v)
-                self.last_10 = self.last_10[:10]
-                self.age[v] = flips
+            v = abs(literal)
+            if v not in flipped:
+                flipped.add(v)
+            else:
+                backflipped += 1
+            self.last_10.insert(0, v)
+            self.last_10 = self.last_10[:10]
+            self.age[v] = flips
             self.do_flip(literal, f.occur_list)
             flips += 1
             self.age[0] = flips
@@ -209,10 +216,5 @@ class WalkSATLN:
         if mean_losses:
             mean_loss = np.mean(mean_losses)
         return all_flips, all_backflips, mean_loss, np.mean(accuracy) 
-
-
-def change_lr(optimizer, lr):
-    for g in optimizer.param_groups:
-        g['lr'] = lr
 
 
