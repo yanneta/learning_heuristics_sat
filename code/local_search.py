@@ -55,11 +55,11 @@ class SATLearner:
                     broken_count += 1
             breaks[i] = broken_count
         breaks = self.normalize_breaks(breaks)
-        #in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
+        in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
         age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
-        #in_last_5 = np.array([int(v in last_5) for v in variables])
-        #x = np.stack([breaks, in_last_10, in_last_5, age], axis=1)
-        x = np.stack([breaks, age], axis=1)
+        in_last_5 = np.array([int(v in last_5) for v in variables])
+        x = np.stack([breaks, in_last_10, in_last_5, age], axis=1)
+        #x = np.stack([breaks, age], axis=1)
         return x
 
     def walksat_step(self, f, unsat_clause):
