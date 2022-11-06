@@ -21,6 +21,7 @@ class SATLearner:
         self.age = []
         self.last_10 = []
         self.sol = []
+        self.flipped = set()
 
     def compute_true_lit_count(self, clauses):
         n_clauses = len(clauses)
@@ -81,6 +82,19 @@ class SATLearner:
         index = random.choice(min_breaking_lits)
         return index, unsat_clause[index]
 
+    def update_stats(self, f, literal, flips, backflipped):
+        v = abs(literal)
+        if v not in self.flipped:
+            self.flipped.add(v)
+        else:
+            backflipped += 1
+        self.last_10.insert(0, v)
+        self.last_10 = self.last_10[:10]
+        self.do_flip(literal, f.occur_list)
+        self.age[v] = flips
+        self.age[0] = flips
+        return backflipped
+
 
 class WalkSATLN(SATLearner):
     def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
@@ -102,14 +116,25 @@ class WalkSATLN(SATLearner):
         index, log_prob = self.select_variable_reinforce(x)
         literal = unsat_clause[index]
         return literal, log_prob
-    
+
+    def select_literal(self, f, unsat_clause, walksat):
+        log_prob = None
+        if random.random() < self.p:
+            literal = random.choice(unsat_clause)
+        else:
+            if walksat:
+                _, literal = self.walksat_step(f, unsat_clause)
+            else:
+                literal, log_prob = self.reinforce_step(f, unsat_clause)
+        return literal, log_prob
+
     def generate_episode_reinforce(self, f, walksat):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
         self.age = np.zeros(f.n_variables + 1)
+        self.flipped = set()
         log_probs = []
         flips = 0
-        flipped = set()
         backflipped = 0
         while flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
@@ -117,25 +142,9 @@ class WalkSATLN(SATLearner):
             if sat:
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
-            log_prob = None
-            if random.random() < self.p:
-                literal = random.choice(unsat_clause)
-            else:
-                if walksat:
-                    _, literal = self.walksat_step(f, unsat_clause)   
-                else:
-                    literal, log_prob = self.reinforce_step(f, unsat_clause)
-            v = abs(literal)
-            if v not in flipped:
-                flipped.add(v)
-            else:
-                backflipped += 1
-            self.last_10.insert(0, v)
-            self.last_10 = self.last_10[:10]
-            self.age[v] = flips
-            self.do_flip(literal, f.occur_list)
+            literal, log_prob = self.select_literal(f, unsat_clause, walksat)
             flips += 1
-            self.age[0] = flips
+            backflipped = self.update_stats(f, literal, flips, backflipped)
             log_probs.append(log_prob)
         return sat, flips, backflipped, log_probs
 

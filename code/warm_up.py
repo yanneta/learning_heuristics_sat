@@ -34,7 +34,7 @@ class WarmUP(SATLearner):
         self.age = np.zeros(f.n_variables + 1)
         log_probs = []
         flips = 0
-        flipped = set()
+        self.flipped = set()
         backflipped = 0
         while flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
@@ -47,18 +47,9 @@ class WarmUP(SATLearner):
             else:
                 literal, log_prob = self.reinforce_step(f, unsat_clause)
                 log_probs.append(-log_prob)
-            v = abs(literal)
             
-            if v not in flipped:
-                flipped.add(v)
-            else:
-                backflipped += 1
-            self.last_10.insert(0, v)
-            self.last_10 = self.last_10[:10]
-            self.do_flip(literal, f.occur_list)
-            flips += 1
-            self.age[0] = flips
-            self.age[v] = flips
+            flips +=1
+            backflipped = self.update_stats(f, literal, flips, backflipped)
         loss = 0
         if len(log_probs) > 0:
             loss = torch.mean(torch.stack(log_probs))
