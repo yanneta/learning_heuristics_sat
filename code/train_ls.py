@@ -21,6 +21,7 @@ class Net(nn.Module):
         self.lin = nn.Linear(input_features, hidden)
         self.dropout = nn.Dropout(0.3)
         self.lin2 = nn.Linear(hidden, 1)
+    
     def forward(self, x):
         x = self.lin(x)
         x = F.relu(self.dropout(x))
@@ -85,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs)
+    basename += "_e" + str(args.epochs) + "_fea2"
     if args.warm_up:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
@@ -97,7 +98,8 @@ def main(args):
     data = load_dir(args.dir_path)
     train_ds, val_ds, test_ds = split_data(data)
 
-    policy = Net()
+    policy = Net(input_features=2)
+    print([p.shape for p in policy.parameters()])
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up:

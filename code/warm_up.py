@@ -53,10 +53,11 @@ class WarmUP:
             breaks[i] = broken_count
             self.break_histo[broken_count] +=1
         breaks = self.normalize_breaks(breaks)
-        in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
+        #in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
         age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
-        in_last_5 = np.array([int(v in last_5) for v in variables]) 
-        return np.stack([breaks, in_last_10, in_last_5, age], axis=1)
+        #in_last_5 = np.array([int(v in last_5) for v in variables]) 
+        #np.stack([breaks, in_last_10, in_last_5, age], axis=1)
+        return np.stack([breaks, age], axis=1)
     
     def walksat_step(self, f, unsat_clause):
         """Returns chosen literal"""
