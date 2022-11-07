@@ -86,12 +86,11 @@ class SATLearner:
         return index, unsat_clause[index]
 
     def select_literal_walksat(self, f, unsat_clause):
-        log_prob = None
         if random.random() < self.p:
             literal = random.choice(unsat_clause)
         else:
             _, literal = self.walksat_step(f, unsat_clause)
-        return literal, log_prob
+        return literal, None
 
     def select_literal(self, f, unsat_clause):
         log_prob = None
