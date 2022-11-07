@@ -86,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fea4"
+    basename += "_e" + str(args.epochs) + "_fixed_lr" +"_fea4"
     if args.warm_up:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
@@ -102,11 +102,11 @@ def main(args):
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up:
-        wup = WarmUP(policy, max_flips=5000)
+        wup = WarmUP(policy, max_flips=args.max_flips)
         for i in range(5):
             wup.train_epoch(optimizer, train_ds)
 
-    change_lr(optimizer, args.lr/5)
+    #change_lr(optimizer, args.lr/5)
     
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
