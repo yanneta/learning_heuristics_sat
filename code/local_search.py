@@ -19,9 +19,12 @@ class SATLearner:
         self.max_flips = max_flips
         self.p = p
         self.age = []
+        self.age2 = []
         self.last_10 = []
         self.sol = []
         self.flipped = set()
+        self.flips = 0
+        self.backflipped = 0
 
     def compute_true_lit_count(self, clauses):
         n_clauses = len(clauses)
@@ -57,9 +60,10 @@ class SATLearner:
             breaks[i] = broken_count
         breaks = self.normalize_breaks(breaks)
         in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
-        age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
+        age = np.array([self.age[v] for v in variables])/(self.flips)
+        age2 = np.array([self.age2[v] for v in variables])/(self.flips)
         in_last_5 = np.array([int(v in last_5) for v in variables])
-        x = np.stack([breaks, in_last_10, in_last_5, age], axis=1)
+        x = np.stack([breaks, in_last_10, in_last_5, age, age2], axis=1)
         return x
 
     def walksat_step(self, f, unsat_clause):
@@ -95,21 +99,20 @@ class SATLearner:
             literal = random.choice(unsat_clause)
         else:
             literal, log_prob = self.reinforce_step(f, unsat_clause)
+            self.age2[abs(literal)] = self.flips
+
         return literal, log_prob
 
-    def update_stats(self, f, literal, flips, backflipped):
+    def update_stats(self, f, literal):
         v = abs(literal)
         if v not in self.flipped:
             self.flipped.add(v)
         else:
-            backflipped += 1
+            self.backflipped += 1
         self.last_10.insert(0, v)
         self.last_10 = self.last_10[:10]
         self.do_flip(literal, f.occur_list)
-        self.age[v] = flips
-        self.age[0] = flips
-        return backflipped
-
+        self.age[v] = self.flips
 
 class WalkSATLN(SATLearner):
     def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
@@ -144,24 +147,25 @@ class WalkSATLN(SATLearner):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
         self.age = np.zeros(f.n_variables + 1)
+        self.age2 = np.zeros(f.n_variables + 1)
         self.flipped = set()
         log_probs = []
-        flips = 0
-        backflipped = 0
-        while flips < self.max_flips:
+        self.flips = 0
+        self.backflipped = 0
+        while self.flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             sat = not unsat_clause_indices
             if sat:
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
+            self.flips += 1
             if walksat:
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
             else:
                 literal, log_prob = self.select_literal(f, unsat_clause)
-            flips += 1
-            backflipped = self.update_stats(f, literal, flips, backflipped)
+            self.update_stats(f, literal)
             log_probs.append(log_prob)
-        return sat, flips, backflipped, log_probs
+        return sat, self.flips, self.backflipped, log_probs
 
     def reinforce_loss(self, log_probs_list):
         T = len(log_probs_list)

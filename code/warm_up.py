@@ -32,26 +32,26 @@ class WarmUP(SATLearner):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
         self.age = np.zeros(f.n_variables + 1)
+        self.age2 = np.zeros(f.n_variables + 1)
         log_probs = []
-        flips = 0
+        self.flips = 0
         self.flipped = set()
-        backflipped = 0
-        while flips < self.max_flips:
+        self.backflipped = 0
+        while self.flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             sat = not unsat_clause_indices
             if sat:
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
+            self.flips +=1
             literal, log_prob = self.select_literal(f, unsat_clause)           
             if log_prob:
                 log_probs.append(-log_prob)
-            
-            flips +=1
-            backflipped = self.update_stats(f, literal, flips, backflipped)
+            self.update_stats(f, literal)
         loss = 0
         if len(log_probs) > 0:
             loss = torch.mean(torch.stack(log_probs))
-        return sat, flips, backflipped, loss
+        return sat, self.flips, self.backflipped, loss
     
     def evaluate(self, data):
         all_flips = []

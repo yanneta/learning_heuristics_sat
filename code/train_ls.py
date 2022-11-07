@@ -86,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fixed_lr" +"_fea4"
+    basename += "_e" + str(args.epochs) + "_fixed_lr" +"_fea5"
     if args.warm_up:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
@@ -98,7 +98,7 @@ def main(args):
     data = load_dir(args.dir_path)
     train_ds, val_ds, test_ds = split_data(data)
 
-    policy = Net(input_features=4)
+    policy = Net(input_features=5)
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up:
