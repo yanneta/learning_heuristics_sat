@@ -60,7 +60,6 @@ class SATLearner:
         age = np.array([self.age[v] for v in variables])/(self.age[0] + 1)
         in_last_5 = np.array([int(v in last_5) for v in variables])
         x = np.stack([breaks, in_last_10, in_last_5, age], axis=1)
-        #x = np.stack([breaks, age], axis=1)
         return x
 
     def walksat_step(self, f, unsat_clause):
@@ -81,6 +80,22 @@ class SATLearner:
                 min_breaking_lits.append(i)
         index = random.choice(min_breaking_lits)
         return index, unsat_clause[index]
+
+    def select_literal_walksat(self, f, unsat_clause):
+        log_prob = None
+        if random.random() < self.p:
+            literal = random.choice(unsat_clause)
+        else:
+            _, literal = self.walksat_step(f, unsat_clause)
+        return literal, log_prob
+
+    def select_literal(self, f, unsat_clause):
+        log_prob = None
+        if random.random() < self.p:
+            literal = random.choice(unsat_clause)
+        else:
+            literal, log_prob = self.reinforce_step(f, unsat_clause)
+        return literal, log_prob
 
     def update_stats(self, f, literal, flips, backflipped):
         v = abs(literal)
@@ -117,15 +132,12 @@ class WalkSATLN(SATLearner):
         literal = unsat_clause[index]
         return literal, log_prob
 
-    def select_literal(self, f, unsat_clause, walksat):
+    def select_literal(self, f, unsat_clause):
         log_prob = None
         if random.random() < self.p:
             literal = random.choice(unsat_clause)
         else:
-            if walksat:
-                _, literal = self.walksat_step(f, unsat_clause)
-            else:
-                literal, log_prob = self.reinforce_step(f, unsat_clause)
+            literal, log_prob = self.reinforce_step(f, unsat_clause)
         return literal, log_prob
 
     def generate_episode_reinforce(self, f, walksat):
@@ -142,7 +154,10 @@ class WalkSATLN(SATLearner):
             if sat:
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
-            literal, log_prob = self.select_literal(f, unsat_clause, walksat)
+            if walksat:
+                literal, log_prob = self.select_literal_walksat(f, unsat_clause)
+            else:
+                literal, log_prob = self.select_literal(f, unsat_clause)
             flips += 1
             backflipped = self.update_stats(f, literal, flips, backflipped)
             log_probs.append(log_prob)

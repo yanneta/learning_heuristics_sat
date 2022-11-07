@@ -42,10 +42,8 @@ class WarmUP(SATLearner):
             if sat:
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
-            if random.random() < self.p:
-                literal = random.choice(unsat_clause)
-            else:
-                literal, log_prob = self.reinforce_step(f, unsat_clause)
+            literal, log_prob = self.select_literal(f, unsat_clause)           
+            if log_prob:
                 log_probs.append(-log_prob)
             
             flips +=1
