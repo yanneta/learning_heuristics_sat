@@ -43,7 +43,8 @@ class SATLearner:
         self.sol[abs(literal)] *= -1
 
     def normalize_breaks(self, x):
-        return np.minimum(x, 5)/5
+        #return np.minimum(x, 5)/5
+        return x/5
 
     def stats_per_clause(self, f, unsat_clause):
         """ computes the featutes needed for the model
