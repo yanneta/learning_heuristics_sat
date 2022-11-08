@@ -47,8 +47,8 @@ class SATLearner:
         return x/5
 
     def normalize_breaks2(self, x):
-        x = np.minimum(x + 1, 6)
-        return np.log(x)/np.log(6)
+        #x = np.minimum(x + 1, 6)
+        return np.log(x + 1)/np.log(6)
 
     def stats_per_clause(self, f, unsat_clause):
         """ computes the featutes needed for the model
@@ -63,7 +63,7 @@ class SATLearner:
                 if self.true_lit_count[index] == 1:
                     broken_count += 1
             breaks[i] = broken_count
-        breaks = self.normalize_breaks(breaks)
+        breaks = self.normalize_breaks2(breaks)
         in_last_10 = np.array([int(v in self.last_10) for v in variables]) 
         age = np.array([self.age[v] for v in variables])/(self.flips)
         age2 = np.array([self.age2[v] for v in variables])/(self.flips)

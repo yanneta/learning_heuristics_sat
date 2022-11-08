@@ -86,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_org_break"
+    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_log_break"
     if args.warm_up:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
