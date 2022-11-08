@@ -16,7 +16,7 @@ from local_search import WalkSATLN
 from warm_up import WarmUP
 
 class Net(nn.Module):
-    def __init__(self, input_features=4, hidden=5):
+    def __init__(self, input_features=4, hidden=10):
         super(Net, self).__init__()
         self.lin = nn.Linear(input_features, hidden)
         self.dropout = nn.Dropout(0.3)
@@ -102,12 +102,10 @@ def main(args):
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up:
-        wup = WarmUP(policy, max_flips=args.max_flips)
-        for i in range(5):
+        wup = WarmUP(policy, max_flips=args.max_flips/2)
+        for i in range(15):
             wup.train_epoch(optimizer, train_ds)
 
-    #change_lr(optimizer, args.lr/5)
-    
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
     to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
@@ -127,6 +125,8 @@ def main(args):
                 torch.save(policy.state_dict(), model_file)
                 best_median_flips = np.median(flips)
                 best_epoch = i
+        if i == 50:
+            change_lr(optimizer, args.lr/5)
     # Test
     ls.policy.load_state_dict(torch.load(model_file))
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
