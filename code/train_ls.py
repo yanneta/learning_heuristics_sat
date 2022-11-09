@@ -86,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_log_break"
+    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_org_last10_"
     if args.warm_up:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
@@ -101,11 +101,12 @@ def main(args):
     policy = Net(input_features=5)
     optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
-    if args.warm_up:
+    if args.warm_up > 0:
         wup = WarmUP(policy, max_flips=args.max_flips/2)
-        for i in range(15):
+        for i in range(args.warm_up):
             wup.train_epoch(optimizer, train_ds)
 
+    print("Eval WalkSAT")
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
     to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
@@ -148,6 +149,6 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.001)
     parser.add_argument('--discount', type=float, default=0.5)
-    parser.add_argument('--warm_up', type=bool, default=True)
+    parser.add_argument('--warm_up', type=int, default=15)
     args = parser.parse_args()
     main(args)

@@ -104,7 +104,7 @@ class SATLearner:
         else:
             literal, log_prob = self.reinforce_step(f, unsat_clause)
             self.age2[abs(literal)] = self.flips
-
+            self.update_stats(f, literal)
         return literal, log_prob
 
     def update_stats(self, f, literal):
@@ -116,10 +116,10 @@ class SATLearner:
         self.last_10.insert(0, v)
         self.last_10 = self.last_10[:10]
         self.do_flip(literal, f.occur_list)
-        self.age[v] = self.flips
+        #self.age[v] = self.flips
 
 class WalkSATLN(SATLearner):
-    def __init__(self, policy, max_tries=10, max_flips=1000, p=0.5, discount=0.5):
+    def __init__(self, policy, max_tries=10, max_flips=10000, p=0.5, discount=0.5):
         super().__init__(policy, max_flips, p)
         self.max_tries = max_tries
         self.discount = discount
@@ -139,14 +139,6 @@ class WalkSATLN(SATLearner):
         literal = unsat_clause[index]
         return literal, log_prob
 
-    def select_literal(self, f, unsat_clause):
-        log_prob = None
-        if random.random() < self.p:
-            literal = random.choice(unsat_clause)
-        else:
-            literal, log_prob = self.reinforce_step(f, unsat_clause)
-        return literal, log_prob
-
     def generate_episode_reinforce(self, f, walksat):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
@@ -156,6 +148,7 @@ class WalkSATLN(SATLearner):
         log_probs = []
         self.flips = 0
         self.backflipped = 0
+        self.last_10 = []
         while self.flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             sat = not unsat_clause_indices
@@ -167,7 +160,8 @@ class WalkSATLN(SATLearner):
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
             else:
                 literal, log_prob = self.select_literal(f, unsat_clause)
-            self.update_stats(f, literal)
+            #self.update_stats(f, literal)
+            self.age[abs(literal)] = self.flips
             log_probs.append(log_prob)
         return sat, self.flips, self.backflipped, log_probs
 
