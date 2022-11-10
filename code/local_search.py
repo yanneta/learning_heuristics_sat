@@ -103,8 +103,10 @@ class SATLearner:
             literal = random.choice(unsat_clause)
         else:
             literal, log_prob = self.reinforce_step(f, unsat_clause)
-            self.age2[abs(literal)] = self.flips
-            self.update_stats(f, literal)
+            v = abs(literal)
+            self.age2[v] = self.flips
+            self.last_10.insert(0, v)
+            self.last_10 = self.last_10[:10]
         return literal, log_prob
 
     def update_stats(self, f, literal):
@@ -113,10 +115,8 @@ class SATLearner:
             self.flipped.add(v)
         else:
             self.backflipped += 1
-        self.last_10.insert(0, v)
-        self.last_10 = self.last_10[:10]
         self.do_flip(literal, f.occur_list)
-        #self.age[v] = self.flips
+        self.age[v] = self.flips
 
 class WalkSATLN(SATLearner):
     def __init__(self, policy, max_tries=10, max_flips=10000, p=0.5, discount=0.5):
@@ -160,9 +160,9 @@ class WalkSATLN(SATLearner):
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
             else:
                 literal, log_prob = self.select_literal(f, unsat_clause)
-            #self.update_stats(f, literal)
-            self.age[abs(literal)] = self.flips
+            self.update_stats(f, literal)
             log_probs.append(log_prob)
+
         return sat, self.flips, self.backflipped, log_probs
 
     def reinforce_loss(self, log_probs_list):

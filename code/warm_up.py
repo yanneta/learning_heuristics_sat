@@ -10,6 +10,7 @@ from torch.distributions import Categorical
 import numpy as np
 from local_search import SATLearner
 
+
 class WarmUP(SATLearner):
     def __init__(self, policy, max_flips=10000, p=0.5):
         super().__init__(policy, max_flips, p)
@@ -72,5 +73,6 @@ class WarmUP(SATLearner):
                 loss.backward()
                 optimizer.step()
                 losses.append(loss.item())
-        print(np.mean(losses))
+        return np.mean(losses)
+
 

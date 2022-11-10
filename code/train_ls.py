@@ -86,8 +86,8 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_org_last10_"
-    if args.warm_up:
+    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_org_last10"
+    if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
     model_file = "models/" + basename + ".pt" 
@@ -104,7 +104,8 @@ def main(args):
     if args.warm_up > 0:
         wup = WarmUP(policy, max_flips=args.max_flips/2)
         for i in range(args.warm_up):
-            wup.train_epoch(optimizer, train_ds)
+            loss = wup.train_epoch(optimizer, train_ds)
+            logging.info('Warm_up train loss {:.2f}'.format(loss))
 
     print("Eval WalkSAT")
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
