@@ -86,7 +86,7 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_fixed_lr" + "_org_last10"
+    basename += "_e" + str(args.epochs) + "_cos_lr" + "_org_last10"
     if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
@@ -99,7 +99,8 @@ def main(args):
     train_ds, val_ds, test_ds = split_data(data)
 
     policy = Net(input_features=5)
-    optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
+    #optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.AdamW(policy.parameters(), lr=args.lr, weight_decay=1e-5)
 
     if args.warm_up > 0:
         wup = WarmUP(policy, max_flips=args.max_flips/2)
@@ -116,19 +117,22 @@ def main(args):
     best_median_flips = np.median(flips)
     best_epoch = 0
     torch.save(policy.state_dict(), model_file)
+    scheduler = torch.optim.lr_scheduler.OneCycleLR(
+        optimizer, max_lr=args.lr, steps_per_epoch=1, epochs=args.epochs,
+        div_factor=10, final_div_factor=50)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
+        #print("lr", optimizer.param_groups[0]["lr"])
         flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
         to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
+        scheduler.step()
         if i%5 == 0 and i > 0:
             to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
             if best_median_flips > np.median(flips):
                 torch.save(policy.state_dict(), model_file)
                 best_median_flips = np.median(flips)
                 best_epoch = i
-        if i == 50:
-            change_lr(optimizer, args.lr/5)
     # Test
     ls.policy.load_state_dict(torch.load(model_file))
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
@@ -148,8 +152,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_flips', type=int, default=10000)
     parser.add_argument('--p', type=float, default=0.5)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.001)
+    parser.add_argument('--lr', type=float, default=0.003)
     parser.add_argument('--discount', type=float, default=0.5)
-    parser.add_argument('--warm_up', type=int, default=15)
+    parser.add_argument('--warm_up', type=int, default=10)
     args = parser.parse_args()
     main(args)
