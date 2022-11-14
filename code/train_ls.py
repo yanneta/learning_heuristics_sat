@@ -99,8 +99,7 @@ def main(args):
     train_ds, val_ds, test_ds = split_data(data)
 
     policy = Net(input_features=5)
-    #optimizer = optim.RMSprop(policy.parameters(), lr=args.lr, weight_decay=1e-5)
-    optimizer = optim.AdamW(policy.parameters(), lr=args.lr, weight_decay=1e-5)
+    optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
 
     if args.warm_up > 0:
         wup = WarmUP(policy, max_flips=args.max_flips/2)
@@ -119,7 +118,7 @@ def main(args):
     torch.save(policy.state_dict(), model_file)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=args.lr, steps_per_epoch=1, epochs=args.epochs,
-        div_factor=10, final_div_factor=50)
+        div_factor=5, final_div_factor=10)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
         #print("lr", optimizer.param_groups[0]["lr"])
@@ -152,7 +151,7 @@ if __name__ == '__main__':
     parser.add_argument('--max_flips', type=int, default=10000)
     parser.add_argument('--p', type=float, default=0.5)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.003)
+    parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--discount', type=float, default=0.5)
     parser.add_argument('--warm_up', type=int, default=10)
     args = parser.parse_args()
