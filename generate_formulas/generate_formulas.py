@@ -47,8 +47,8 @@ def generate_kclique(N, n, p, k, i0):
     p probability of an edge
     k size of the clique
     """
-    for i in range(N):
-        filename = 'kclique_k{}_n{}_p{}_{}.cnf'.format(k, n, p, i0+i)
+    for i in range(i0, N):
+        filename = 'kclique_k{}_n{}_p{}_{}.cnf'.format(k, n, p, i)
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'kclique', str(k), 'gnp', str(n), str(p)]
         create_sat_problem(filename, call_list)
 
@@ -83,6 +83,12 @@ def main():
 
     N=2000
 
+    if args.expr == "domset/2-5-0.2/":
+        generate_domeset(N, 5, 0.2, 3, 0)
+
+    if args.expr == "domset/3-7-0.2/":
+        generate_domeset(N, 7, 0.2, 3, 0)
+
     if args.expr == "domset/3-9-0.2/":
         generate_domeset(N, 9, 0.2, 3, 0)
     
@@ -94,9 +100,13 @@ def main():
 
     if args.expr == "kclique/3-20-0.05/":
         generate_kclique(N, 20, 0.05, 3, 0)
-    #python code/kclique.py data/kclique/15-0.066/ 2000 15 0.066 3 0 &
-    #python code/kclique.py data/kclique/20-0.05/ 2000 20 0.05 3 0 &
     
+    if args.expr == "kclique/3-10-0.1/":
+        generate_kclique(N, 10, 0.1, 3, 0)
+    
+    if args.expr == "kclique/3-15-0.066/":
+        generate_kclique(N, 15, 0.066, 3, 0)
+        
     # random k-SAT experiments
     if args.expr == "rand3sat/5-21/":
         generate_randksat(N, 3, 5, 21, 0)
