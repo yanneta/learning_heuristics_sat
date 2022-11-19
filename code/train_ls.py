@@ -86,11 +86,11 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p)
+    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_net2_"
     if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename + ".pt" 
+    model_file = "models/" + basename + "_net2.pt" 
     print(log_file)
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
@@ -98,7 +98,7 @@ def main(args):
     data = load_dir(args.dir_path)
     train_ds, val_ds, test_ds = split_data(data)
 
-    policy = Net(input_features=5)
+    policy = Net2(input_features=5)
     optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
 
     if args.warm_up > 0:
