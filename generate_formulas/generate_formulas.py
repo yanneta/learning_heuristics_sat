@@ -66,22 +66,24 @@ def generate_domeset(N, n, p, k, i0):
         create_sat_problem(filename, call_list)
 
 
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('expr', type=str, help='experiment name')
+    parser.add_argument('--expr', type=str, help='experiment name')
+    parser.add_argument('--test', type=bool, default=False)
     args = parser.parse_args()
 
-    path = "data/" + args.expr
+    N=2000
+    path = ""
+    if args.test:
+        path = "test_"
+        N=500
+    path += "data/" + args.expr
     try:
         os.makedirs(path)
     except OSError:
         if not os.path.isdir(path):
             raise
     os.chdir(path)
-
-    N=2000
 
     if args.expr == "domset/2-5-0.2/":
         generate_domeset(N, 5, 0.2, 3, 0)
@@ -114,8 +116,10 @@ def main():
         generate_randksat(N, 3, 10, 34, 0)
     if args.expr == "rand3sat/25-106/":
         generate_randksat(N, 3, 25, 106, 0)
-    if args.expr == "rand3sat":
+    if args.expr == "rand3sat/50-213/":
         generate_randksat(N, 3, 50, 213, 0)
+
+    if args.expr == "rand3sat":
         generate_randksat(N, 3, 75, 320, 0)
         generate_randksat(N, 3, 100, 426, 0)
         generate_randksat(N, 3, 150, 639, 0)
