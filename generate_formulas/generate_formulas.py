@@ -118,10 +118,11 @@ def main():
         generate_randksat(N, 3, 25, 106, 0)
     if args.expr == "rand3sat/50-213/":
         generate_randksat(N, 3, 50, 213, 0)
+    if args.expr == "rand3sat/100-426/":
+        generate_randksat(N, 3, 100, 426, 0)
 
     if args.expr == "rand3sat":
         generate_randksat(N, 3, 75, 320, 0)
-        generate_randksat(N, 3, 100, 426, 0)
         generate_randksat(N, 3, 150, 639, 0)
         generate_randksat(N, 3, 200, 852, 0)
 
