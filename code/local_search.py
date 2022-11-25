@@ -47,7 +47,7 @@ class SATLearner:
         return x/5
 
     def normalize_breaks2(self, x):
-        #x = np.minimum(x + 1, 6)
+        x = np.minimum(x, 10)
         return np.log(x + 1)/np.log(6)
 
     def stats_per_clause(self, f, unsat_clause):
