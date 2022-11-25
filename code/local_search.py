@@ -182,7 +182,7 @@ class WalkSATLN(SATLearner):
         losses = []
         all_backflips = []
         all_flips = []
-        num_sols = 0
+        sats = []
         for f in list_f:
             sat, flips, backflips, log_probs = self.generate_episode_reinforce(f, walksat)
             all_flips.append(flips)
@@ -190,10 +190,10 @@ class WalkSATLN(SATLearner):
             if sat and flips > 0 and not all(map(lambda x: x is None, log_probs)):
                 loss = self.reinforce_loss(log_probs)
                 losses.append(loss)
-            num_sols += sat    
+            sats.append(sat)    
         if losses:
             losses = torch.stack(losses).sum()  
-        return all_flips, all_backflips, losses, num_sols/self.max_tries
+        return all_flips, all_backflips, losses, np.array(sats)
     
     
     def evaluate(self, data, walksat=False):
@@ -204,12 +204,13 @@ class WalkSATLN(SATLearner):
         self.policy.eval()
         for f in data:
             list_f = [f for i in range(self.max_tries)]
-            flips, backflips, losses, acc = self.generate_episodes(list_f, walksat)
+            flips, backflips, losses, sats = self.generate_episodes(list_f, walksat)
+            solved = sats.max()
             all_flips.append(flips)
             all_backflips.append(backflips)
             if losses:
                 mean_losses.append(losses.item())
-            accuracy.append(acc)
+            accuracy.append(solved)
             mean_loss = None
             if mean_losses:
                 mean_loss = np.mean(mean_losses)
@@ -228,7 +229,8 @@ class WalkSATLN(SATLearner):
         batches = [data[i:i+k] for i in range(0, len(data), k)]
         for list_f in batches:
             self.policy.train()
-            flips, backflips, loss, acc = self.generate_episodes(list_f)
+            flips, backflips, loss, sats = self.generate_episodes(list_f)
+            acc = sats.mean()
             if acc > 0:
                 optimizer.zero_grad()
                 loss.backward()
