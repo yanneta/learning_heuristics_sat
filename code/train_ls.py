@@ -63,9 +63,16 @@ def compute_mean_median_CI(values):
     means = [np.mean(np.random.choice(values, N)) for i in range(1000)]
     return np.quantile(means, q=[.25, .975]), np.quantile(medians, q=[.25, .975])
 
-def to_log(flips, backflips,  loss, accuracy, comment, CI=False):
+def compute_median_per_obs(flips, max_tries):
+    return [np.median(flips[i:i+max_tries]) for i in range(len(flips)//max_tries)]
+
+def to_log(flips, backflips,  loss, accuracy, comment, CI=False, max_tries=None):
+    """when max_tries is not None we compute median flips per observation"""
     if loss is None:
         loss = -1
+    if max_tries:
+        med_flips = compute_median_per_obs(flips, max_tries)
+        med_backflips = compute_median_per_obs(backflips, max_tries)
     formatting = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'
     text = formatting.format(comment, np.median(flips), np.mean(flips), np.median(backflips), \
         np.mean(backflips), 100 * accuracy, loss)
@@ -110,9 +117,9 @@ def main(args):
     print("Eval WalkSAT")
     ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
-    to_log(flips, backflips,  loss, accuracy, comment="EVAL Walksat")
+    to_log(flips, backflips,  loss, accuracy, "EVAL Walksat", args.max_tries)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
-    to_log(flips, backflips,  loss, accuracy, comment="EVAL No Train/ WarmUP")
+    to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
     best_median_flips = np.median(flips)
     best_epoch = 0
     torch.save(policy.state_dict(), model_file)
@@ -127,20 +134,21 @@ def main(args):
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
         scheduler.step()
         if i%5 == 0 and i > 0:
-            to_log(flips, backflips,  loss, accuracy, comment="EVAL  Ep " + str(i))
-            if best_median_flips > np.median(flips):
+            to_log(flips, backflips,  loss, accuracy, "EVAL  Ep " + str(i), args.max_tries)
+            med_flips = compute_median_per_obs(flips, args.max_tries)
+            if best_median_flips > np.median(med_flips):
                 torch.save(policy.state_dict(), model_file)
-                best_median_flips = np.median(flips)
+                best_median_flips = np.median(med_flips)
                 best_epoch = i
     # Test
     ls.policy.load_state_dict(torch.load(model_file))
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
-    to_log(flips, backflips,  loss, accuracy, comment="TEST", CI=True)
+    to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
     logging.info("Best epoch " + str(best_epoch))
     print("Best epoch", best_epoch)
    
     flips, backflips,  loss, accuracy = ls.evaluate(test_ds, walksat=True)
-    to_log(flips, backflips,  loss, accuracy, comment="TEST Walksat", CI=True)
+    to_log(flips, backflips,  loss, accuracy, "TEST Walksat", True, args.max_tries)
      
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
