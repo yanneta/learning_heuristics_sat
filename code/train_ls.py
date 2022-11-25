@@ -97,7 +97,7 @@ def main(args):
     if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename + "norm" + "_net2.pt"  
+    model_file = "models/" + basename +  "_net2_v2.pt"  
     print(log_file)
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
