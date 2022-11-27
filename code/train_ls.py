@@ -93,11 +93,11 @@ def main(args):
         random.seed(args.seed)
 
     basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_norm"
+    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv3"
     if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename +  "_net2_v2.pt"  
+    model_file = "models/" + basename +  "_net2_v3.pt"  
     print(log_file)
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
