@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import random
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -15,13 +16,16 @@ from utils import *
 def main(args):
     if args.seed > -1:
         random.seed(args.seed)
-
+    basename = Path(args.model_path).stem + "_test" 
+    log_file = "logs/" + basename +  ".log"
+    
     logging.basicConfig(filename=log_file, level=logging.INFO)
-
+    logging.info('Model path {}'.format(args.model_path))
+    logging.info('Test data path {}'.format(args.dir_path))
     data = load_dir(args.dir_path)
     policy = Net2(input_features=5)
-    ls = WalkSATLN(policy, args.max_tries, args.max_flips)
-    ls.policy.load_state_dict(torch.load(model_file))
+    ls = WalkSATLN(policy, args.max_tries, args.max_flips, args.p)
+    ls.policy.load_state_dict(torch.load(args.model_path))
     flips, backflips,  loss, accuracy = ls.evaluate(data)
     to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
    
