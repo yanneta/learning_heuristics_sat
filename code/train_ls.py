@@ -14,121 +14,17 @@ import torch.optim as optim
 from cnf import CNF
 from local_search import WalkSATLN
 from warm_up import WarmUP
-
-class Net(nn.Module):
-    def __init__(self, input_features=4, hidden=10):
-        super(Net, self).__init__()
-        self.lin = nn.Linear(input_features, hidden)
-        self.dropout = nn.Dropout(0.3)
-        self.lin2 = nn.Linear(hidden, 1)
-    
-    def forward(self, x):
-        x = self.lin(x)
-        x = F.relu(self.dropout(x))
-        x = self.lin2(x)
-        return x
-
-class Net2(nn.Module):
-    def __init__(self, input_features=4):
-        super(Net2, self).__init__()
-        self.lin = nn.Linear(input_features, 1)
-    def forward(self, x):
-        x = self.lin(x)
-        return x
-
-def load_dir(path):
-    data = []
-    for filename in os.listdir(path):
-        name, ext = os.path.splitext(filename)
-        if ext != '.cnf':
-            continue
-        f = CNF.from_file(os.path.join(path, filename))
-        data.append(f)
-    return data
-
-def split_data(data):
-    logging.info("length of data is " + str(len(data)))
-    train_ds = data[:1500]
-    val_ds = data[1500:1700]
-    test_ds = data[1700:]
-    return train_ds, val_ds, test_ds
-
-def change_lr(optimizer, lr):
-    for g in optimizer.param_groups:
-        g['lr'] = lr
-
-def compute_mean_median_CI(values):
-    N = len(values)
-    medians = [np.median(np.random.choice(values, N)) for i in range(1000)]
-    means = [np.mean(np.random.choice(values, N)) for i in range(1000)]
-    return np.quantile(means, q=[.25, .975]), np.quantile(medians, q=[.25, .975])
-
-def compute_median_per_obs(flips, max_tries):
-    return [np.median(flips[i:i+max_tries]) for i in range(len(flips)//max_tries)]
-
-def to_log(flips, backflips,  loss, accuracy, comment, CI=False, max_tries=None):
-    """when max_tries is not None we compute median flips per observation"""
-    if loss is None:
-        loss = -1
-    if max_tries:
-        med_flips = compute_median_per_obs(flips, max_tries)
-        med_backflips = compute_median_per_obs(backflips, max_tries)
-    formatting = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'
-    text = formatting.format(comment, np.median(flips), np.mean(flips), np.median(backflips), \
-        np.mean(backflips), 100 * accuracy, loss)
-    logging.info(text)
-    if CI:
-        ci_means, ci_median = compute_mean_median_CI(flips)
-        formatting = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
-        text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
-        logging.info(text)
-        ci_means, ci_median = compute_mean_median_CI(backflips)
-        formatting = 'CI means BACKFLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
-        text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
-        logging.info(text)
+from utils import *
 
 
-def main(args):
-    if args.seed > -1:
-        random.seed(args.seed)
-
-    basename = args.dir_path.replace("../", "").replace("/","_") + "_d_" +  str(args.discount) 
-    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv3"
-    if args.warm_up > 0:
-         basename += "_wup"
-    log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename +  "_net2_v3.pt"  
-    print(log_file)
-
-    logging.basicConfig(filename=log_file, level=logging.INFO)
-
-    data = load_dir(args.dir_path)
-    train_ds, val_ds, test_ds = split_data(data)
-
-    policy = Net2(input_features=5)
-    optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
-
-    if args.warm_up > 0:
-        wup = WarmUP(policy, max_flips=args.max_flips/2)
-        for i in range(args.warm_up):
-            loss = wup.train_epoch(optimizer, train_ds)
-            logging.info('Warm_up train loss {:.2f}'.format(loss))
-
-    print("Eval WalkSAT")
-    ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
-    flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
-    to_log(flips, backflips,  loss, accuracy, "EVAL Walksat", args.max_tries)
-    flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
-    to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
-    best_median_flips = np.median(flips)
+def train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model_file):
     best_epoch = 0
-    torch.save(policy.state_dict(), model_file)
+    torch.save(ls.policy.state_dict(), model_file)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=args.lr, steps_per_epoch=1, epochs=args.epochs,
         div_factor=5, final_div_factor=10)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
-        #print("lr", optimizer.param_groups[0]["lr"])
         flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
         to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
@@ -140,16 +36,54 @@ def main(args):
                 torch.save(policy.state_dict(), model_file)
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
-    # Test
-    ls.policy.load_state_dict(torch.load(model_file))
-    flips, backflips,  loss, accuracy = ls.evaluate(test_ds)
-    to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
-    logging.info("Best epoch " + str(best_epoch))
-    print("Best epoch", best_epoch)
-   
-    flips, backflips,  loss, accuracy = ls.evaluate(test_ds, walksat=True)
-    to_log(flips, backflips,  loss, accuracy, "TEST Walksat", True, args.max_tries)
-     
+    formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
+    text = formatting.format(best_median_flips,  best_epoch)
+    logging.info(text)
+
+def train_warm_up(policy, optimizer, train_ds, max_flips=5000):
+    wup = WarmUP(policy, max_flips=max_flips)
+    for i in range(args.warm_up):
+        loss = wup.train_epoch(optimizer, train_ds)
+        logging.info('Warm_up train loss {:.2f}'.format(loss))
+
+def create_filenames(args):
+    basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
+    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv3"
+    if args.warm_up > 0:
+         basename += "_wup"
+    log_file = "logs/" + basename +  ".log"
+    model_file = "models/" + basename +  "_net2_v3.pt"
+    return log_file, model_file
+
+def main(args):
+    if args.seed > -1:
+        random.seed(args.seed)
+
+    log_file, model_file = create_filenames(args)
+    print(log_file)
+
+    logging.basicConfig(filename=log_file, level=logging.INFO)
+
+    data = load_dir(args.dir_path)
+    train_ds, val_ds = split_data(data)
+
+    policy = Net2(input_features=5)
+    optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
+
+    if args.warm_up > 0:
+        train_warm_up(policy, optimizer, train_ds)
+
+    print("Eval WalkSAT")
+    ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
+    flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
+    to_log(flips, backflips,  loss, accuracy, "EVAL Walksat", args.max_tries)
+    flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
+    to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
+    best_median_flips = np.median(flips)
+
+    train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model_file)
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dir_path', type=str)
