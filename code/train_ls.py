@@ -33,7 +33,7 @@ def train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model
             to_log(flips, backflips,  loss, accuracy, "EVAL  Ep " + str(i), args.max_tries)
             med_flips = compute_median_per_obs(flips, args.max_tries)
             if best_median_flips > np.median(med_flips):
-                torch.save(policy.state_dict(), model_file)
+                torch.save(ls.policy.state_dict(), model_file)
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
     formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
