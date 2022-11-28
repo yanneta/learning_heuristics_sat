@@ -9,7 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-#from cnf import CNF
 from local_search import WalkSATLN
 from utils import *
 
@@ -18,7 +17,7 @@ def main(args):
         random.seed(args.seed)
     basename = Path(args.model_path).stem + "_test" 
     log_file = "logs/" + basename +  ".log"
-    
+    print(log_file)    
     logging.basicConfig(filename=log_file, level=logging.INFO)
     logging.info('Model path {}'.format(args.model_path))
     logging.info('Test data path {}'.format(args.dir_path))
