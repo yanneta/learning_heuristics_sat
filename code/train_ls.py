@@ -48,11 +48,11 @@ def train_warm_up(policy, optimizer, train_ds, max_flips=5000):
 
 def create_filenames(args):
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv3"
+    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv" + "_dos"
     if args.warm_up > 0:
          basename += "_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename +  "_net2_v3.pt"
+    model_file = "models/" + basename +  "v3.pt"
     return log_file, model_file
 
 def main(args):
