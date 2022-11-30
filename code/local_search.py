@@ -159,8 +159,7 @@ class WalkSATLN(SATLearner):
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
             else:
                 indeces = np.random.choice(unsat_clause_indices, 2)
-                clauses = np.array(f.clauses)[indeces]
-                list_literals = clauses[0] + clauses[1]
+                list_literals = f.clauses[indeces[0]] +  f.clauses[indeces[1]] 
                 literal, log_prob = self.select_literal(f, list_literals)
             self.update_stats(f, literal)
             log_probs.append(log_prob)
