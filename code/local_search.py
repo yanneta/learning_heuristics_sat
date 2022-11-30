@@ -50,14 +50,13 @@ class SATLearner:
         x = np.minimum(x, 5)
         return np.log(x + 1)/np.log(6)
 
-    def stats_per_clause(self, f, unsat_clause):
+    def stats_per_clause(self, f, list_literals):
         """ computes the featutes needed for the model
         """
-        r = f.n_variables/ len(f.clauses)
-        variables = [abs(v) for v in unsat_clause]
+        variables = [abs(v) for v in list_literals]
         breaks = np.zeros(len(variables))
         last_5 = self.last_10[:5]
-        for i, literal in enumerate(unsat_clause):
+        for i, literal in enumerate(list_literals):
             broken_count = 0
             for index in f.occur_list[-literal]:
                 if self.true_lit_count[index] == 1:
@@ -97,12 +96,12 @@ class SATLearner:
             _, literal = self.walksat_step(f, unsat_clause)
         return literal, None
 
-    def select_literal(self, f, unsat_clause):
+    def select_literal(self, f, list_literals):
         log_prob = None
         if random.random() < self.p:
-            literal = random.choice(unsat_clause)
+            literal = random.choice(list_literals)
         else:
-            literal, log_prob = self.reinforce_step(f, unsat_clause)
+            literal, log_prob = self.reinforce_step(f, list_literals)
             v = abs(literal)
             self.age2[v] = self.flips
             self.last_10.insert(0, v)
@@ -132,11 +131,11 @@ class WalkSATLN(SATLearner):
         v = dist.sample()
         return v, dist.log_prob(v)
     
-    def reinforce_step(self, f, unsat_clause):
-        x = self.stats_per_clause(f, unsat_clause)
+    def reinforce_step(self, f, list_literals):
+        x = self.stats_per_clause(f, list_literals)
         x = torch.from_numpy(x).float()
         index, log_prob = self.select_variable_reinforce(x)
-        literal = unsat_clause[index]
+        literal = list_literals[index]
         return literal, log_prob
 
     def generate_episode_reinforce(self, f, walksat):
@@ -154,12 +153,15 @@ class WalkSATLN(SATLearner):
             sat = not unsat_clause_indices
             if sat:
                 break
-            unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
             self.flips += 1
             if walksat:
+                unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
             else:
-                literal, log_prob = self.select_literal(f, unsat_clause)
+                indeces = np.random.choice(unsat_clause_indices, 2)
+                clauses = np.array(f.clauses)[indeces]
+                list_literals = clauses[0] + clauses[1]
+                literal, log_prob = self.select_literal(f, list_literals)
             self.update_stats(f, literal)
             log_probs.append(log_prob)
 
