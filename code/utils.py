@@ -28,6 +28,14 @@ class Net(nn.Module):
         x = self.lin2(x)
         return x
 
+class NoiseNet(nn.Module):
+    def __init__(self, input_features=1):
+        super(NoiseNet, self).__init__()
+        self.lin = nn.Linear(input_features, 1)
+    def forward(self, x):
+        x = self.lin(x)
+        return 0.5*torch.sigmoid(x)
+
 class Net2(nn.Module):
     def __init__(self, input_features=4):
         super(Net2, self).__init__()

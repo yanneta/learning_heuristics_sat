@@ -12,8 +12,8 @@ from local_search import SATLearner
 
 
 class WarmUP(SATLearner):
-    def __init__(self, policy, max_flips=10000, p=0.5):
-        super().__init__(policy, max_flips, p)
+    def __init__(self, policy, noise_policy, max_flips=10000, p=0.5):
+        super().__init__(policy, noise_policy, max_flips, p)
         self.break_histo = np.zeros(1000)
         
     def select_variable_reinforce(self, x, f, unsat_clause):
@@ -45,7 +45,7 @@ class WarmUP(SATLearner):
                 break
             unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
             self.flips +=1
-            literal, log_prob = self.select_literal(f, unsat_clause)           
+            literal, log_prob, log_prob_p = self.select_literal(f, unsat_clause)           
             if log_prob:
                 log_probs.append(-log_prob)
             self.update_stats(f, literal)

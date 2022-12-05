@@ -17,7 +17,7 @@ from warm_up import WarmUP
 from utils import *
 
 
-def train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model_file):
+def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file):
     best_epoch = 0
     torch.save(ls.policy.state_dict(), model_file)
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
@@ -25,7 +25,7 @@ def train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model
         div_factor=5, final_div_factor=10)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
-        flips, backflips, loss, accuracy = ls.train_epoch(optimizer, train_ds)
+        flips, backflips, loss, accuracy = ls.train_epoch(optimizer, noise_optimizer, train_ds)
         to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
         flips, backflips, loss, accuracy = ls.evaluate(val_ds)
         scheduler.step()
@@ -36,12 +36,14 @@ def train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model
                 torch.save(ls.policy.state_dict(), model_file)
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
+            noise_parms = [p.item() for p in ls.noise_policy.parameters()]
+            logging.info("parms {:.2f} {:.2f}".format(noise_parms[0], noise_parms[1]))
     formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
     text = formatting.format(best_median_flips,  best_epoch)
     logging.info(text)
 
-def train_warm_up(policy, optimizer, train_ds, max_flips=5000):
-    wup = WarmUP(policy, max_flips=max_flips)
+def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
+    wup = WarmUP(policy, noise_policy, max_flips=max_flips)
     for i in range(args.warm_up):
         loss = wup.train_epoch(optimizer, train_ds)
         logging.info('Warm_up train loss {:.2f}'.format(loss))
@@ -69,19 +71,21 @@ def main(args):
 
     policy = Net2(input_features=5)
     optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
+    noise_policy = NoiseNet()
+    noise_optimizer = optim.AdamW(noise_policy.parameters(), lr=1e-4, weight_decay=1e-5)
 
     if args.warm_up > 0:
-        train_warm_up(policy, optimizer, train_ds)
+        train_warm_up(policy, noise_policy, optimizer, train_ds)
 
     print("Eval WalkSAT")
-    ls = WalkSATLN(policy, args.max_tries, args.max_flips, discount=args.discount)
+    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, discount=args.discount)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
     to_log(flips, backflips,  loss, accuracy, "EVAL Walksat", args.max_tries)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
     to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
     best_median_flips = np.median(flips)
 
-    train_policy(ls, optimizer, train_ds, val_ds, args, best_median_flips, model_file)
+    train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file)
 
 
 if __name__ == '__main__':
