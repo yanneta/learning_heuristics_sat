@@ -108,7 +108,7 @@ class SATLearner:
         m = Bernoulli(p)
         sample = m.sample()
         #print("p", p)
-        return sample[0], m.log_prob(x)[0]
+        return sample[0], m.log_prob(sample)[0]
 
     def select_literal(self, f, list_literals):
         log_prob = None
