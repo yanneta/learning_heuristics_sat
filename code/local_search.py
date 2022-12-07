@@ -171,6 +171,7 @@ class WalkSATLN(SATLearner):
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             if num_unsat_clauses > len(unsat_clause_indices):
                 self.steps_since_improv = 0
+                num_unsat_clauses = len(unsat_clause_indices)
             else:
                 self.steps_since_improv += 1
             sat = not unsat_clause_indices
@@ -233,6 +234,7 @@ class WalkSATLN(SATLearner):
         mean_losses = []
         accuracy = []
         self.policy.eval()
+        self.noise_policy.eval()
         for f in data:
             list_f = [f for i in range(self.max_tries)]
             flips, backflips, losses, losses_p, sats = self.generate_episodes(list_f, walksat)

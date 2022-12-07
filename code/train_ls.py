@@ -17,9 +17,10 @@ from warm_up import WarmUP
 from utils import *
 
 
-def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file):
+def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_files):
     best_epoch = 0
-    torch.save(ls.policy.state_dict(), model_file)
+    torch.save(ls.policy.state_dict(), model_files[0])
+    torch.save(ls.noise_policy.state_dict(), model_files[1])
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=args.lr, steps_per_epoch=1, epochs=args.epochs,
         div_factor=5, final_div_factor=10)
@@ -33,7 +34,8 @@ def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_me
             to_log(flips, backflips,  loss, accuracy, "EVAL  Ep " + str(i), args.max_tries)
             med_flips = compute_median_per_obs(flips, args.max_tries)
             if best_median_flips > np.median(med_flips):
-                torch.save(ls.policy.state_dict(), model_file)
+                torch.save(ls.policy.state_dict(), model_files[0])
+                torch.save(ls.noise_policy.state_dict(), model_files[1])
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
             noise_parms = [p.item() for p in ls.noise_policy.parameters()]
@@ -49,20 +51,22 @@ def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
         logging.info('Warm_up train loss {:.2f}'.format(loss))
 
 def create_filenames(args):
+    model_files = []
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs) + "_cos_lr" + "p_" +  str(args.p) + "_normv" + "_dos"
-    if args.warm_up > 0:
-         basename += "_wup"
+    basename += "_e" + str(args.epochs)
+    if args.warm_up == 0:
+         basename += "no_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename +  "v3.pt"
-    return log_file, model_file
+    model_files.append("models/" + basename +  "_score.pt")
+    model_files.append("models/" + basename +  "_p.pt")
+    return log_file, model_files
 
 def main(args):
     if args.seed > -1:
         random.seed(args.seed)
 
-    log_file, model_file = create_filenames(args)
-    print(log_file)
+    log_file, model_files = create_filenames(args)
+    print(log_file, model_files[0], model_files[1])
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
 
@@ -85,7 +89,7 @@ def main(args):
     to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
     best_median_flips = np.median(flips)
 
-    train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file)
+    train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_files)
 
 
 if __name__ == '__main__':

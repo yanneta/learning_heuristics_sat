@@ -24,8 +24,11 @@ def main(args):
     logging.info('Test data path {}'.format(args.dir_path))
     data = load_dir(args.dir_path)[:500]
     policy = Net2(input_features=5)
-    ls = WalkSATLN(policy, args.max_tries, args.max_flips, args.p)
+    noise_policy = NoiseNet()
+
+    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips)
     ls.policy.load_state_dict(torch.load(args.model_path))
+    ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
     flips, backflips,  loss, accuracy = ls.evaluate(data)
     to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
    
@@ -33,9 +36,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dir_path', type=str)
     parser.add_argument('-m', '--model_path', type=str)
+    parser.add_argument('--noise_model_path', type=str)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--max_tries', type=int, default=10)
     parser.add_argument('--max_flips', type=int, default=10000)
-    parser.add_argument('--p', type=float, default=0.5)
     args = parser.parse_args()
     main(args)
