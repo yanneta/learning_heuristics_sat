@@ -32,6 +32,8 @@ class NoiseNet(nn.Module):
     def __init__(self, input_features=1):
         super(NoiseNet, self).__init__()
         self.lin = nn.Linear(input_features, 1)
+        self.lin.weight.data.uniform_(1, 1.5)
+        self.lin.bias.data.fill_(0.5)
     def forward(self, x):
         x = self.lin(x)
         return 0.5*torch.sigmoid(x)
