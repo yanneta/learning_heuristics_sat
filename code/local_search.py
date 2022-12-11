@@ -102,7 +102,7 @@ class SATLearner:
     def sample_estimate_p(self, f):
         num_clauses = len(f.clauses)
         x = self.steps_since_improv/num_clauses 
-        x = np.array([x])
+        x = np.array([x, x*x])
         x = torch.from_numpy(x[None,]).float()
         p = self.noise_policy(x)
         m = Bernoulli(p)
