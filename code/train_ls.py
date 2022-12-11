@@ -38,8 +38,8 @@ def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_me
                 torch.save(ls.noise_policy.state_dict(), model_files[1])
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
-            noise_parms = [p.detach().numpy() for p in ls.noise_policy.parameters()]
-            logging.info("parms {:.2f} {:.2f}".format(noise_parms[0], noise_parms[1]))
+            [w, b] = [p.detach().numpy() for p in ls.noise_policy.parameters()]
+            logging.info("parms [{:.2f} {:.2f}] {:.2f}".format(w[0][0], w[0][1], b[0]))
     formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
     text = formatting.format(best_median_flips,  best_epoch)
     logging.info(text)
@@ -76,7 +76,7 @@ def main(args):
     policy = Net2(input_features=5)
     optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
     noise_policy = NoiseNet()
-    noise_optimizer = optim.AdamW(noise_policy.parameters(), lr=1e-2, weight_decay=1e-5)
+    noise_optimizer = optim.AdamW(noise_policy.parameters(), lr=1e-3, weight_decay=1e-5)
 
     if args.warm_up > 0:
         train_warm_up(policy, noise_policy, optimizer, train_ds)
