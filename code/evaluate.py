@@ -22,7 +22,7 @@ def main(args):
     logging.basicConfig(filename=log_file, level=logging.INFO)
     logging.info('Model path {}'.format(args.model_path))
     logging.info('Test data path {}'.format(args.dir_path))
-    data = load_dir(args.dir_path)[:2]
+    data = load_dir(args.dir_path)[:500]
     policy = Net2(input_features=5)
     noise_policy = NoiseNet()
 

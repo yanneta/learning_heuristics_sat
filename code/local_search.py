@@ -93,7 +93,7 @@ class SATLearner:
         return index, unsat_clause[index]
 
     def select_literal_walksat(self, f, unsat_clause):
-        if random.random() < self.p:
+        if random.random() < 0.5:
             literal = random.choice(unsat_clause)
         else:
             _, literal = self.walksat_step(f, unsat_clause)
@@ -107,13 +107,14 @@ class SATLearner:
         p = self.noise_policy(x)
         m = Bernoulli(p)
         sample = m.sample()
-        print(self.flips, p.item(), self.steps_since_improv)
+        #print(self.flips, p.item(), self.steps_since_improv)
         return sample[0], m.log_prob(sample)[0]
 
     def select_literal(self, f, list_literals):
         log_prob = None
-        sample, log_prob_p = self.sample_estimate_p(f)
+        #sample, log_prob_p = self.sample_estimate_p(f)
         #print(sample, log_prob_p)
+        sample = int(random.random() < self.p)
         if sample == 1:
             literal = random.choice(list_literals)
         else:
@@ -122,6 +123,8 @@ class SATLearner:
             self.age2[v] = self.flips
             self.last_10.insert(0, v)
             self.last_10 = self.last_10[:10]
+        
+        log_prob_p = 0
         return literal, log_prob, log_prob_p
 
     def update_stats(self, f, literal):
@@ -188,7 +191,7 @@ class WalkSATLN(SATLearner):
                 literal, log_prob, log_prob_p = self.select_literal(f, list_literals)
             self.update_stats(f, literal)
             log_probs.append(log_prob)
-            log_probs_p.append(log_prob_p)
+            #log_probs_p.append(log_prob_p)
 
         return sat, self.flips, self.backflipped, log_probs, log_probs_p
 
@@ -204,7 +207,8 @@ class WalkSATLN(SATLearner):
         log_probs = torch.stack(log_probs_filtered)
         p_rewards = self.discount ** torch.arange(T - 1, -1, -1, dtype=torch.float32, device=log_probs.device)
         loss = -torch.mean(p_rewards[torch.from_numpy(mask).to(log_probs.device)] * log_probs)
-        loss_p = -torch.mean(p_rewards * torch.stack(log_probs_p))
+        #loss_p = -torch.mean(p_rewards * torch.stack(log_probs_p))
+        loss_p = 0
         return loss, loss_p
 
     def generate_episodes(self, list_f, walksat=False):
@@ -224,7 +228,8 @@ class WalkSATLN(SATLearner):
             sats.append(sat)    
         if losses:
             losses = torch.stack(losses).sum()
-            losses_p = torch.stack(losses_p).sum()
+            #losses_p = torch.stack(losses_p).sum()
+            losses_p = 0
         return all_flips, all_backflips, losses, losses_p, np.array(sats)
     
     
@@ -271,9 +276,9 @@ class WalkSATLN(SATLearner):
                 optimizer.step()
                 losses.append(loss.item())
                 mean_losses.append(loss.item())
-                noise_optimizer.zero_grad()
-                loss_p.backward()
-                noise_optimizer.step()
+                #noise_optimizer.zero_grad()
+                #loss_p.backward()
+                #noise_optimizer.step()
 
             all_flips.append(flips)
             all_backflips.append(backflips)
