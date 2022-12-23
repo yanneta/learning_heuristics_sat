@@ -49,15 +49,15 @@ def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_me
 def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
     wup = WarmUP(policy, noise_policy, max_flips=max_flips)
     for i in range(args.warm_up):
-        loss = wup.train_epoch(optimizer, train_ds)
-        logging.info('Warm_up train loss {:.2f}'.format(loss))
+        loss, flips = wup.train_epoch(optimizer, train_ds)
+        logging.info('Warm_up train loss {:.2f},  med flips {:.2f}'.format(loss, flips))
 
 def create_filenames(args):
     model_files = []
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs) + "_p_c_"
+    basename += "_e" + str(args.epochs) + "_p_c"
     if args.warm_up == 0:
-         basename += "no_wup"
+         basename += "_no_wup"
     log_file = "logs/" + basename +  ".log"
     model_file = "models/" + basename +  "score.pt"
     #model_files.append("models/" + basename +  "_score.pt")

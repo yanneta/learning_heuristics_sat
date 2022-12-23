@@ -65,14 +65,16 @@ class WarmUP(SATLearner):
         
     def train_epoch(self, optimizer, data):
         losses = []
+        flip_list = []
         for f in data:
             self.policy.train()
             sat, flips, backflipped, loss = self.generate_episode_reinforce(f)
+            flip_list.append(flips) 
             if loss > 0:
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 losses.append(loss.item())
-        return np.mean(losses)
+        return np.mean(losses), np.median(flip_list)
 
 
