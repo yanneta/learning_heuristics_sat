@@ -107,7 +107,7 @@ class SATLearner:
         p = self.noise_policy(x)
         m = Bernoulli(p)
         sample = m.sample()
-        #print("p", p)
+        print(self.flips, p.item(), self.steps_since_improv)
         return sample[0], m.log_prob(sample)[0]
 
     def select_literal(self, f, list_literals):
@@ -183,7 +183,7 @@ class WalkSATLN(SATLearner):
                 literal, log_prob = self.select_literal_walksat(f, unsat_clause)
                 log_prob_p = None
             else:
-                indeces = np.random.choice(unsat_clause_indices, 2)
+                indeces = np.random.choice(unsat_clause_indices, 1)
                 list_literals = f.clauses[indeces[0]] # +  f.clauses[indeces[1]] 
                 literal, log_prob, log_prob_p = self.select_literal(f, list_literals)
             self.update_stats(f, literal)
