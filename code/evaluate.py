@@ -18,7 +18,8 @@ def main(args):
     basename = "test_" + PurePath(args.dir_path).name 
     basename += Path(args.model_path).stem 
     log_file = "logs/" + basename +  ".log"
-    print(log_file)    
+    p = get_p(args.dir_path)
+    print(log_file, p)    
     logging.basicConfig(filename=log_file, level=logging.INFO)
     logging.info('Model path {}'.format(args.model_path))
     logging.info('Test data path {}'.format(args.dir_path))
@@ -26,9 +27,9 @@ def main(args):
     policy = Net2(input_features=5)
     noise_policy = NoiseNet()
 
-    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips)
+    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, p=p)
     ls.policy.load_state_dict(torch.load(args.model_path))
-    ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
+    #ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
     flips, backflips,  loss, accuracy = ls.evaluate(data)
     to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
    
@@ -36,7 +37,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--dir_path', type=str)
     parser.add_argument('-m', '--model_path', type=str)
-    parser.add_argument('--noise_model_path', type=str)
+    #parser.add_argument('--noise_model_path', type=str)
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--max_tries', type=int, default=10)
     parser.add_argument('--max_flips', type=int, default=10000)

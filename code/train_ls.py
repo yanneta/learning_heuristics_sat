@@ -9,7 +9,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from pathlib import Path
 
 from cnf import CNF
 from local_search import WalkSATLN
@@ -17,7 +16,6 @@ from warm_up import WarmUP
 from utils import *
 
 
-p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436}
 
 def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file):
     best_epoch = 0
@@ -68,13 +66,8 @@ def main(args):
     if args.seed > -1:
         random.seed(args.seed)
 
-    dir_path = Path(args.dir_path)
-    dist_name = (dir_path.parent).stem
-    if dist_name in p_dict:
-        p = p_dict[dist_name]
-    else:
-        p = args.p
-    print(dist_name, p)
+    p = get_p(args.dir_path)
+    print(p)
 
     log_file, model_file = create_filenames(args)
     print(log_file, model_file)
