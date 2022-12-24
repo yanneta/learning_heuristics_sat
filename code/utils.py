@@ -9,11 +9,18 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+from pathlib import Path
 
 from cnf import CNF
 from local_search import WalkSATLN
 from warm_up import WarmUP
+
+p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436}
+
+def get_p(dir_path):
+    dir_path = Path(dir_path)
+    dist_name = (dir_path.parent).stem
+    return p_dict.get(dist_name, 0.12)
 
 class Net(nn.Module):
     def __init__(self, input_features=4, hidden=10):
