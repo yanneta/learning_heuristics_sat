@@ -24,13 +24,11 @@ def main(args):
     logging.info('Model path {}'.format(args.model_path))
     logging.info('Test data path {}'.format(args.dir_path))
     data = load_dir(args.dir_path)[:500]
-    model = Net2(input_features=5)
-    model.load_state_dict(torch.load(args.model_path))
-    model_np = model_to_numpy(model)
+    policy = Net2(input_features=5)
     noise_policy = NoiseNet()
  
-    ls = WalkSATLN(model_np, noise_policy, args.max_tries, args.max_flips, p=p)
-    #ls.policy.load_state_dict(torch.load(args.model_path))
+    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, p=p)
+    ls.policy.load_state_dict(torch.load(args.model_path))
     #ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
     flips, backflips,  loss, accuracy = ls.evaluate(data)
     to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)

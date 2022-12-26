@@ -84,11 +84,7 @@ def main(args):
 
     if args.warm_up > 0:
         train_warm_up(policy, noise_policy, optimizer, train_ds)
-
-    print("Eval WalkSAT")
     ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, discount=args.discount, p=p)
-    flips, backflips,  loss, accuracy = ls.evaluate(val_ds, walksat=True)
-    to_log(flips, backflips,  loss, accuracy, "EVAL Walksat", args.max_tries)
     flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
     to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
     best_median_flips = np.median(flips)

@@ -12,8 +12,6 @@ import torch.optim as optim
 from pathlib import Path
 
 from cnf import CNF
-from local_search import WalkSATLN
-from warm_up import WarmUP
 
 p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436}
 

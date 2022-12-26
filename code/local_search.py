@@ -14,10 +14,12 @@ import torch.optim as optim
 from torch.distributions import Categorical
 from torch.distributions.bernoulli import Bernoulli 
 from scipy.special import softmax
+from utils import *
 
 class SATLearner:
     def __init__(self, policy, noise_policy, max_flips=10000, p=0.5):
         self.policy = policy
+        self.model_np =()
         self.noise_policy = noise_policy
         self.steps_since_improv = 0
         self.max_flips = max_flips
@@ -93,13 +95,6 @@ class SATLearner:
         index = random.choice(min_breaking_lits)
         return index, unsat_clause[index]
 
-    def select_literal_walksat(self, f, unsat_clause):
-        if random.random() < 0.5:
-            literal = random.choice(unsat_clause)
-        else:
-            _, literal = self.walksat_step(f, unsat_clause)
-        return literal, None
-
     def sample_estimate_p(self, f):
         num_clauses = len(f.clauses)
         x = self.steps_since_improv/num_clauses 
@@ -111,7 +106,7 @@ class SATLearner:
         #print(self.flips, p.item(), self.steps_since_improv)
         return sample[0], m.log_prob(sample)[0]
 
-    def select_literal(self, f, list_literals, Np):
+    def select_literal(self, f, list_literals, Np=False):
         log_prob = None
         #sample, log_prob_p = self.sample_estimate_p(f)
         #print(sample, log_prob_p)
@@ -142,7 +137,7 @@ class SATLearner:
         self.age[v] = self.flips
 
     def eval_model_np(self, x):
-        (w, b) = self.policy
+        (w, b) = self.model_np
         return (x*w).sum(axis=1) +b
 
     def select_variable_reinforce_np(self, x):
@@ -179,7 +174,7 @@ class WalkSATLN(SATLearner):
         literal = list_literals[index]
         return literal, log_prob
 
-    def generate_episode_reinforce(self, f, walksat, Np=False):
+    def generate_episode_reinforce(self, f, Np=False):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
         self.age = np.zeros(f.n_variables + 1)
@@ -203,18 +198,12 @@ class WalkSATLN(SATLearner):
             if sat:
                 break
             self.flips += 1
-            if walksat:
-                unsat_clause = f.clauses[random.choice(unsat_clause_indices)]
-                literal, log_prob = self.select_literal_walksat(f, unsat_clause)
-                log_prob_p = None
-            else:
-                indeces = np.random.choice(unsat_clause_indices, 1)
-                list_literals = f.clauses[indeces[0]] # +  f.clauses[indeces[1]] 
-                literal, log_prob, log_prob_p = self.select_literal(f, list_literals, Np)
+            indeces = np.random.choice(unsat_clause_indices, 1)
+            list_literals = f.clauses[indeces[0]] 
+            literal, log_prob, log_prob_p = self.select_literal(f, list_literals, Np)
             self.update_stats(f, literal)
             log_probs.append(log_prob)
             #log_probs_p.append(log_prob_p)
-
         return sat, self.flips, self.backflipped, log_probs, log_probs_p
 
     def reinforce_loss(self, log_probs, log_probs_p):
@@ -233,14 +222,14 @@ class WalkSATLN(SATLearner):
         loss_p = 0
         return loss, loss_p
 
-    def generate_episodes(self, list_f, walksat=False, Np=False):
+    def generate_episodes(self, list_f, Np=False):
         losses = []
         losses_p = []
         all_backflips = []
         all_flips = []
         sats = []
         for f in list_f:
-            sat, flips, backflips, log_probs, log_probs_p = self.generate_episode_reinforce(f, walksat, Np)
+            sat, flips, backflips, log_probs, log_probs_p = self.generate_episode_reinforce(f, Np)
             all_flips.append(flips)
             all_backflips.append(backflips)
             if not Np:
@@ -256,16 +245,17 @@ class WalkSATLN(SATLearner):
         return all_flips, all_backflips, losses, losses_p, np.array(sats)
     
     
-    def evaluate(self, data, walksat=False):
+    def evaluate(self, data):
         all_flips = []
         all_backflips = []
         mean_losses = []
         accuracy = []
-        #self.policy.eval()
+        self.policy.eval()
         self.noise_policy.eval()
+        self.model_np = model_to_numpy(self.policy)
         for f in data:
             list_f = [f for i in range(self.max_tries)]
-            flips, backflips, losses, losses_p, sats = self.generate_episodes(list_f, walksat, Np=True)
+            flips, backflips, losses, losses_p, sats = self.generate_episodes(list_f, Np=True)
             solved = sats.max()
             all_flips.append(flips)
             all_backflips.append(backflips)
