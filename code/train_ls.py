@@ -26,20 +26,19 @@ def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_me
         div_factor=5, final_div_factor=10)
     for i in range(1, args.epochs + 1):
         print("epoch ", i)
-        flips, backflips, loss, accuracy = ls.train_epoch(optimizer, noise_optimizer, train_ds)
-        to_log(flips, backflips,  loss, accuracy, comment="Train Ep " + str(i))
-        flips, backflips, loss, accuracy = ls.evaluate(val_ds)
+        flips, loss, accuracy = ls.train_epoch(optimizer, noise_optimizer, train_ds)
+        to_log(flips, loss, accuracy, comment="Train Ep " + str(i))
         scheduler.step()
         if i%5 == 0 and i > 0:
-            to_log(flips, backflips,  loss, accuracy, "EVAL  Ep " + str(i), args.max_tries)
-            med_flips = compute_median_per_obs(flips, args.max_tries)
+            med_flips, mean_flips, accuracy = ls.evaluate(val_ds)
+            to_log_eval(med_flips, mean_flips, accuracy, "EVAL  Ep " + str(i))
             if best_median_flips > np.median(med_flips):
                 torch.save(ls.policy.state_dict(), model_file)
                 #torch.save(ls.noise_policy.state_dict(), model_files[1])
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
-            [w, b] = [p.detach().numpy() for p in ls.noise_policy.parameters()]
-            logging.info("parms [{:.2f} {:.2f}] {:.2f}".format(w[0][0], w[0][1], b[0]))
+            #[w, b] = [p.detach().numpy() for p in ls.noise_policy.parameters()]
+            #logging.info("parms [{:.2f} {:.2f}] {:.2f}".format(w[0][0], w[0][1], b[0]))
     formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
     text = formatting.format(best_median_flips,  best_epoch)
     logging.info(text)
@@ -85,9 +84,9 @@ def main(args):
     if args.warm_up > 0:
         train_warm_up(policy, noise_policy, optimizer, train_ds)
     ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, discount=args.discount, p=p)
-    flips, backflips,  loss, accuracy = ls.evaluate(val_ds)
-    to_log(flips, backflips,  loss, accuracy, "EVAL No Train/ WarmUP", args.max_tries)
-    best_median_flips = np.median(flips)
+    med_flips, mean_flips, accuracy = ls.evaluate(val_ds)
+    to_log_eval(med_flips, mean_flips, accuracy, "EVAL No Train/ WarmUP")
+    best_median_flips = np.median(med_flips)
 
     train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file)
 

@@ -78,33 +78,30 @@ def change_lr(optimizer, lr):
     for g in optimizer.param_groups:
         g['lr'] = lr
 
-def compute_mean_median_CI(values):
-    N = len(values)
-    medians = [np.median(np.random.choice(values, N)) for i in range(1000)]
-    means = [np.mean(np.random.choice(values, N)) for i in range(1000)]
-    return np.quantile(means, q=[.25, .975]), np.quantile(medians, q=[.25, .975])
+def compute_mean_median_CI(med_values, mean_values):
+    N = len(med_values)
+    medians = [np.median(np.random.choice(med_values, N)) for i in range(1000)]
+    means = [np.mean(np.random.choice(mean_values, N)) for i in range(1000)]
+    return np.quantile(means, q=[.025, .975]), np.quantile(medians, q=[.025, .975])
 
 def compute_median_per_obs(flips, max_tries):
     return [np.median(flips[i:i+max_tries]) for i in range(len(flips)//max_tries)]
 
-def to_log(flips, backflips,  loss, accuracy, comment, CI=False, max_tries=None):
-    """when max_tries is not None we compute median flips per observation"""
-    if loss is None:
-        loss = -1
-    if max_tries:
-        med_flips = compute_median_per_obs(flips, max_tries)
-        med_backflips = compute_median_per_obs(backflips, max_tries)
-    formatting = '{} Flips Med: {:.2f}, Mean: {:.2f} Backflips Med: {:.2f} Mean: {:.2f} Acc: {:.2f} Loss: {:.2f}'
-    text = formatting.format(comment, np.median(flips), np.mean(flips), np.median(backflips), \
-        np.mean(backflips), 100 * accuracy, loss)
+def to_log_eval(med_flips, mean_flips, accuracy, comment, CI=False):
+    formatting = '{} Flips Med: {:.2f}, Mean: {:.2f} Acc: {:.2f}'
+    text = formatting.format(comment, np.median(med_flips), np.mean(mean_flips), 100 * accuracy)
     logging.info(text)
     if CI:
-        ci_means, ci_median = compute_mean_median_CI(flips)
+        ci_means, ci_median = compute_mean_median_CI(med_flips, mean_flips)
         formatting = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
         text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
-        ci_means, ci_median = compute_mean_median_CI(backflips)
-        formatting = 'CI means BACKFLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
-        text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
-        logging.info(text)
+
+def to_log(flips, loss, accuracy, comment):
+    """when max_tries is not None we compute median flips per observation"""
+    if loss is None:
+        loss = -1
+    formatting = '{} Flips Med: {:.2f}, Mean: {:.2f}  Acc: {:.2f} Loss: {:.2f}'
+    text = formatting.format(comment, np.median(flips), np.mean(flips), 100 * accuracy, loss)
+    logging.info(text)
 

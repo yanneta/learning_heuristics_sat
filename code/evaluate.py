@@ -30,8 +30,8 @@ def main(args):
     ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, p=p)
     ls.policy.load_state_dict(torch.load(args.model_path))
     #ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
-    flips, backflips,  loss, accuracy = ls.evaluate(data)
-    to_log(flips, backflips,  loss, accuracy, "TEST", True, args.max_tries)
+    med_flips, mean_flips,  accuracy = ls.evaluate(data)
+    to_log_eval(med_flips, mean_flips, accuracy, "TEST", True)
    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

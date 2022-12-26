@@ -28,9 +28,7 @@ class SATLearner:
         self.age2 = []
         self.last_10 = []
         self.sol = []
-        self.flipped = set()
         self.flips = 0
-        self.backflipped = 0
 
     def compute_true_lit_count(self, clauses):
         n_clauses = len(clauses)
@@ -106,7 +104,19 @@ class SATLearner:
         #print(self.flips, p.item(), self.steps_since_improv)
         return sample[0], m.log_prob(sample)[0]
 
-    def select_literal(self, f, list_literals, Np=False):
+    def select_literal_eval(self, f, list_literals):
+        sample = int(random.random() < self.p)
+        if sample == 1:
+            literal = random.choice(list_literals)
+        else:
+            literal = self.reinforce_step_np(f, list_literals)
+            v = abs(literal)
+            self.age2[v] = self.flips
+            self.last_10.insert(0, v)
+            self.last_10 = self.last_10[:10]
+        return literal
+
+    def select_literal(self, f, list_literals):
         log_prob = None
         #sample, log_prob_p = self.sample_estimate_p(f)
         #print(sample, log_prob_p)
@@ -114,11 +124,7 @@ class SATLearner:
         if sample == 1:
             literal = random.choice(list_literals)
         else:
-            if Np:
-                literal = self.reinforce_step_np(f, list_literals)
-                log_prob = 0
-            else:
-                literal, log_prob = self.reinforce_step(f, list_literals)
+            literal, log_prob = self.reinforce_step(f, list_literals)
             v = abs(literal)
             self.age2[v] = self.flips
             self.last_10.insert(0, v)
@@ -129,10 +135,6 @@ class SATLearner:
 
     def update_stats(self, f, literal):
         v = abs(literal)
-        if v not in self.flipped:
-            self.flipped.add(v)
-        else:
-            self.backflipped += 1
         self.do_flip(literal, f.occur_list)
         self.age[v] = self.flips
 
@@ -174,37 +176,54 @@ class WalkSATLN(SATLearner):
         literal = list_literals[index]
         return literal, log_prob
 
-    def generate_episode_reinforce(self, f, Np=False):
+
+    def init_all(self, f):
         self.sol = [x if random.random() < 0.5 else -x for x in range(f.n_variables + 1)]
         self.true_lit_count = self.compute_true_lit_count(f.clauses)
         self.age = np.zeros(f.n_variables + 1)
         self.age2 = np.zeros(f.n_variables + 1)
-        self.flipped = set()
-        log_probs = []
-        log_probs_p = []
         self.flips = 0
-        self.backflipped = 0
         self.last_10 = []
-        self.steps_since_improv = 0
+        #self.steps_since_improv = 0
+
+    def generate_episode_reinforce_eval(self, f):
+        self.init_all(f)
         num_unsat_clauses = len(f.clauses)
         while self.flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
-            if num_unsat_clauses > len(unsat_clause_indices):
-                self.steps_since_improv = 0
-                num_unsat_clauses = len(unsat_clause_indices)
-            else:
-                self.steps_since_improv += 1
+            sat = not unsat_clause_indices
+            if sat:
+                break
+            self.flips += 1
+            indeces = np.random.choice(unsat_clause_indices, 1)
+            list_literals = f.clauses[indeces[0]]
+            literal = self.select_literal_eval(f, list_literals)
+            self.update_stats(f, literal)
+        return sat, self.flips
+
+    def generate_episode_reinforce(self, f):
+        self.init_all(f)
+        log_probs = []
+        log_probs_p = []
+        num_unsat_clauses = len(f.clauses)
+        while self.flips < self.max_flips:
+            unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
+            #if num_unsat_clauses > len(unsat_clause_indices):
+            #    self.steps_since_improv = 0
+            #    num_unsat_clauses = len(unsat_clause_indices)
+            #else:
+            #    self.steps_since_improv += 1
             sat = not unsat_clause_indices
             if sat:
                 break
             self.flips += 1
             indeces = np.random.choice(unsat_clause_indices, 1)
             list_literals = f.clauses[indeces[0]] 
-            literal, log_prob, log_prob_p = self.select_literal(f, list_literals, Np)
+            literal, log_prob, log_prob_p = self.select_literal(f, list_literals)
             self.update_stats(f, literal)
             log_probs.append(log_prob)
             #log_probs_p.append(log_prob_p)
-        return sat, self.flips, self.backflipped, log_probs, log_probs_p
+        return sat, self.flips, log_probs, log_probs_p
 
     def reinforce_loss(self, log_probs, log_probs_p):
         T = len(log_probs)
@@ -222,57 +241,51 @@ class WalkSATLN(SATLearner):
         loss_p = 0
         return loss, loss_p
 
-    def generate_episodes(self, list_f, Np=False):
+    def generate_episodes(self, list_f):
         losses = []
         losses_p = []
-        all_backflips = []
         all_flips = []
         sats = []
         for f in list_f:
-            sat, flips, backflips, log_probs, log_probs_p = self.generate_episode_reinforce(f, Np)
+            sat, flips, log_probs, log_probs_p = self.generate_episode_reinforce(f)
             all_flips.append(flips)
-            all_backflips.append(backflips)
-            if not Np:
-                if sat and flips > 0 and not all(map(lambda x: x is None, log_probs)):
-                    loss, loss_p = self.reinforce_loss(log_probs, log_probs_p)
-                    losses.append(loss)
-                    losses_p.append(loss_p)
+            if sat and flips > 0 and not all(map(lambda x: x is None, log_probs)):
+                loss, loss_p = self.reinforce_loss(log_probs, log_probs_p)
+                losses.append(loss)
+                losses_p.append(loss_p)
             sats.append(sat)    
         if losses:
             losses = torch.stack(losses).sum()
             #losses_p = torch.stack(losses_p).sum()
             losses_p = 0
-        return all_flips, all_backflips, losses, losses_p, np.array(sats)
+        return all_flips, losses, losses_p, np.array(sats)
     
-    
-    def evaluate(self, data):
+    def generate_episodes_eval(self, f):
         all_flips = []
-        all_backflips = []
-        mean_losses = []
+        sats = []
+        for i in range(self.max_tries):
+            sat, flips = self.generate_episode_reinforce_eval(f)
+            all_flips.append(flips)
+            sats.append(sat)
+        return np.median(all_flips),  np.mean(all_flips), np.array(sats).max()
+
+    def evaluate(self, data):
+        med_flips = []
+        mean_flips = []
         accuracy = []
         self.policy.eval()
-        self.noise_policy.eval()
+        #self.noise_policy.eval()
         self.model_np = model_to_numpy(self.policy)
         for f in data:
-            list_f = [f for i in range(self.max_tries)]
-            flips, backflips, losses, losses_p, sats = self.generate_episodes(list_f, Np=True)
-            solved = sats.max()
-            all_flips.append(flips)
-            all_backflips.append(backflips)
-            if losses:
-                mean_losses.append(losses.item())
+            med_f, mean_f, solved = self.generate_episodes_eval(f)
+            med_flips.append(med_f)
+            mean_flips.append(mean_f)
             accuracy.append(solved)
-            mean_loss = None
-            if mean_losses:
-                mean_loss = np.mean(mean_losses)
-        all_flips = np.array(all_flips).reshape(-1)
-        all_backflips = np.array(all_backflips).reshape(-1)
-        return all_flips, all_backflips,  mean_loss, np.mean(accuracy)
+        return med_flips, mean_flips,  np.mean(accuracy)
         
     def train_epoch(self, optimizer, noise_optimizer, data):
         losses = []
         all_flips = []
-        all_backflips = []
         mean_losses = []
         accuracy = []
         np.random.shuffle(data)
@@ -281,7 +294,7 @@ class WalkSATLN(SATLearner):
         for list_f in batches:
             self.policy.train()
             self.noise_policy.train()
-            flips, backflips, loss, loss_p, sats = self.generate_episodes(list_f)
+            flips, loss, loss_p, sats = self.generate_episodes(list_f)
             acc = sats.mean()
             if acc > 0:
                 optimizer.zero_grad()
@@ -294,11 +307,10 @@ class WalkSATLN(SATLearner):
                 #noise_optimizer.step()
 
             all_flips.append(flips)
-            all_backflips.append(backflips)
             accuracy.append(acc)
         mean_loss = -1
         if mean_losses:
             mean_loss = np.mean(mean_losses)
-        return all_flips, all_backflips, mean_loss, np.mean(accuracy) 
+        return all_flips, mean_loss, np.mean(accuracy) 
 
 
