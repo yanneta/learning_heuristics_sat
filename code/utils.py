@@ -17,6 +17,12 @@ from warm_up import WarmUP
 
 p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436}
 
+def model_to_numpy(model):
+    parms = [p for p in model.parameters()]
+    w = parms[0][0].detach().numpy()
+    b = parms[1][0].detach().numpy()
+    return (w, b)
+
 def get_p(dir_path):
     dir_path = Path(dir_path)
     dist_name = (dir_path.parent).stem
