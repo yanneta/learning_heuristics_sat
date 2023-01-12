@@ -67,11 +67,15 @@ def load_dir(path):
         data.append(f)
     return data
 
-def split_data(data, num_vals=100):
+def split_data(data, N=None, num_vals=100):
     logging.info("length of data is " + str(len(data)))
-    N = len(data) - num_vals
+    if N is None:
+        N = len(data) - num_vals
+    if len(data) < 100:
+        return data, data
     train_ds = data[:N]
-    val_ds = data[N:]
+    val_ds = data[-num_vals:]
+    logging.info("len of train, val " + str(len(train_ds)) + "," + str(len(val_ds)))
     return train_ds, val_ds
 
 def change_lr(optimizer, lr):

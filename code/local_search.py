@@ -16,6 +16,10 @@ from torch.distributions.bernoulli import Bernoulli
 from scipy.special import softmax
 from utils import *
 
+
+def flatten(l):
+    return [item for sublist in l for item in sublist]
+
 class SATLearner:
     def __init__(self, policy, noise_policy, max_flips=10000, p=0.5):
         self.policy = policy
@@ -282,7 +286,7 @@ class WalkSATLN(SATLearner):
             mean_flips.append(mean_f)
             accuracy.append(solved)
         return med_flips, mean_flips,  np.mean(accuracy)
-        
+
     def train_epoch(self, optimizer, noise_optimizer, data):
         losses = []
         all_flips = []
@@ -311,6 +315,6 @@ class WalkSATLN(SATLearner):
         mean_loss = -1
         if mean_losses:
             mean_loss = np.mean(mean_losses)
-        return all_flips, mean_loss, np.mean(accuracy) 
+        return flatten(all_flips), mean_loss, np.mean(accuracy) 
 
 

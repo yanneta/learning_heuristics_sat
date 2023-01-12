@@ -10,7 +10,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 
-from cnf import CNF
 from local_search import WalkSATLN
 from warm_up import WarmUP
 from utils import *
@@ -52,7 +51,7 @@ def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
 def create_filenames(args):
     model_files = []
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs) + "_p_c"
+    basename += "_e" + str(args.epochs) + "_n" + str(args.n_train) + "_p_c"
     if args.warm_up == 0:
          basename += "_no_wup"
     log_file = "logs/" + basename +  ".log"
@@ -74,7 +73,7 @@ def main(args):
     logging.basicConfig(filename=log_file, level=logging.INFO)
 
     data = load_dir(args.dir_path)
-    train_ds, val_ds = split_data(data)
+    train_ds, val_ds = split_data(data, args.n_train)
 
     policy = Net2(input_features=5)
     optimizer = optim.AdamW(policy.parameters(), lr=args.lr/3, weight_decay=1e-5)
@@ -103,5 +102,6 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--discount', type=float, default=0.5)
     parser.add_argument('--warm_up', type=int, default=10)
+    parser.add_argument('--n_train', type=int, default=1900)
     args = parser.parse_args()
     main(args)

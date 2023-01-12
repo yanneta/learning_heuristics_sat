@@ -87,25 +87,19 @@ def main():
 
     if args.expr == "domset/2-5-0.2/":
         generate_domeset(N, 5, 0.2, 3, 0)
-
     if args.expr == "domset/3-7-0.2/":
         generate_domeset(N, 7, 0.2, 3, 0)
-
     if args.expr == "domset/3-9-0.2/":
         generate_domeset(N, 9, 0.2, 3, 0)
-    
     if args.expr == "domset/4-12-0.2/":
         generate_domeset(N, 12, 0.2, 4, 0)
     
     if args.expr == "kclique/3-5-0.2/":
         generate_kclique(N, 5, 0.2, 3, 0) 
-
     if args.expr == "kclique/3-20-0.05/":
         generate_kclique(N, 20, 0.05, 3, 0)
-    
     if args.expr == "kclique/3-10-0.1/":
         generate_kclique(N, 10, 0.1, 3, 0)
-    
     if args.expr == "kclique/3-15-0.066/":
         generate_kclique(N, 15, 0.066, 3, 0)
         
@@ -118,13 +112,16 @@ def main():
         generate_randksat(N, 3, 25, 106, 0)
     if args.expr == "rand3sat/50-213/":
         generate_randksat(N, 3, 50, 213, 0)
+    if args.expr == "rand3sat/75-320/":
+        generate_randksat(N, 3, 75, 320, 0)
     if args.expr == "rand3sat/100-426/":
         generate_randksat(N, 3, 100, 426, 0)
-
-    if args.expr == "rand3sat":
-        generate_randksat(N, 3, 75, 320, 0)
-        generate_randksat(N, 3, 150, 639, 0)
+    if args.expr == "rand3sat/200-852/":
         generate_randksat(N, 3, 200, 852, 0)
+    if args.expr == "rand3sat/150-639":
+        generate_randksat(N, 3, 150, 639, 0)
+    if args.expr == "rand3sat/500-2130/":
+        generate_randksat(100, 3, 500, 2130, 0)
 
     # kcolor experiments
     if args.expr == "kcolor/3-5-0.5/":
