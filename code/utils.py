@@ -88,6 +88,18 @@ def compute_mean_median_CI(med_values, mean_values):
     means = [np.mean(np.random.choice(mean_values, N)) for i in range(1000)]
     return np.quantile(means, q=[.025, .975]), np.quantile(medians, q=[.025, .975])
 
+def median_CI_2(x):
+    """  Practical Nonparametric Statistics, 3rd Edition by W.J. Conover.
+    """
+    n = len(x)
+    q = 0.5
+    z = 1.96
+    nq = n*q
+    j =  int(np.ceil(nq - z*np.sqrt(nq*(1-q))))
+    k =  int(np.ceil(nq + z*np.sqrt(nq*(1-q))))
+    m = np.sort(x)
+    return m[j], np.median(x), m[k]
+
 def compute_median_per_obs(flips, max_tries):
     return [np.median(flips[i:i+max_tries]) for i in range(len(flips)//max_tries)]
 
@@ -96,10 +108,16 @@ def to_log_eval(med_flips, mean_flips, accuracy, comment, CI=False):
     text = formatting.format(comment, np.median(med_flips), np.mean(mean_flips), 100 * accuracy)
     logging.info(text)
     if CI:
+        
         ci_means, ci_median = compute_mean_median_CI(med_flips, mean_flips)
         formatting = 'CI means FLIPS ({:.2f}, {:.2f}), CI median ({:.2f}, {:.2f})'
         text = formatting.format(ci_means[0], ci_means[1], ci_median[0], ci_median[0])
         logging.info(text)
+        l, m, h = median_CI_2(med_flips)
+        formatting = 'CI median FLIPS low {:.2f}, med {:.2f} high {:.2f}'
+        text = formatting.format(l, m, h)
+        logging.info(text)
+
 
 def to_log(flips, loss, accuracy, comment):
     """when max_tries is not None we compute median flips per observation"""
