@@ -288,11 +288,13 @@ class WalkSATLN(SATLearner):
         #self.noise_policy.eval()
         self.model_np = model_to_numpy(self.policy)
         for i, f in enumerate(data):
-            print(i)
             med_f, mean_f, solved = self.generate_episodes_eval(f)
+            print(i, med_f, end="|")
             med_flips.append(med_f)
             mean_flips.append(mean_f)
             accuracy.append(solved)
+            if i%10 == 0:
+                print("")
         return med_flips, mean_flips,  np.mean(accuracy)
 
     def train_epoch(self, optimizer, noise_optimizer, data):
