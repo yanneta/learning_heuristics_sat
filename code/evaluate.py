@@ -27,7 +27,7 @@ def main(args):
     policy = Net2(input_features=5)
     noise_policy = NoiseNet()
  
-    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, p=p)
+    ls = WalkSATLN(policy, noise_policy, False, args.max_tries, args.max_flips, p=p)
     ls.policy.load_state_dict(torch.load(args.model_path))
     #ls.noise_policy.load_state_dict(torch.load(args.noise_model_path))
     med_flips, mean_flips,  accuracy = ls.evaluate(data)
