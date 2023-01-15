@@ -162,7 +162,7 @@ class SATLearner:
         return literal
 
 class WalkSATLN(SATLearner):
-    def __init__(self, policy, noise_policy,  train_noise, max_tries=10, max_flips=10000, p=0.5, discount=0.5):
+    def __init__(self, policy, noise_policy,  train_noise=False, max_tries=10, max_flips=10000, p=0.5, discount=0.5):
         super().__init__(policy, noise_policy, train_noise, max_flips, p)
         self.max_tries = max_tries
         self.discount = discount
@@ -287,7 +287,8 @@ class WalkSATLN(SATLearner):
         self.policy.eval()
         #self.noise_policy.eval()
         self.model_np = model_to_numpy(self.policy)
-        for f in data:
+        for i, f in enumerate(data):
+            print(i)
             med_f, mean_f, solved = self.generate_episodes_eval(f)
             med_flips.append(med_f)
             mean_flips.append(mean_f)
