@@ -16,10 +16,11 @@ from utils import *
 
 
 
-def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file):
+def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_files):
     best_epoch = 0
-    torch.save(ls.policy.state_dict(), model_file)
-    #torch.save(ls.noise_policy.state_dict(), model_files[1])
+    torch.save(ls.policy.state_dict(), model_files[0])
+    if ls.train_noise:
+        torch.save(ls.noise_policy.state_dict(), model_files[1])
     scheduler = torch.optim.lr_scheduler.OneCycleLR(
         optimizer, max_lr=args.lr, steps_per_epoch=1, epochs=args.epochs,
         div_factor=5, final_div_factor=10)
@@ -32,12 +33,14 @@ def train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_me
             med_flips, mean_flips, accuracy = ls.evaluate(val_ds)
             to_log_eval(med_flips, mean_flips, accuracy, "EVAL  Ep " + str(i))
             if best_median_flips > np.median(med_flips):
-                torch.save(ls.policy.state_dict(), model_file)
-                #torch.save(ls.noise_policy.state_dict(), model_files[1])
+                torch.save(ls.policy.state_dict(), model_files[0])
+                if ls.train_noise:
+                    torch.save(ls.noise_policy.state_dict(), model_files[1])
                 best_median_flips = np.median(med_flips)
                 best_epoch = i
-            #[w, b] = [p.detach().numpy() for p in ls.noise_policy.parameters()]
-            #logging.info("parms [{:.2f} {:.2f}] {:.2f}".format(w[0][0], w[0][1], b[0]))
+            if ls.train_noise:
+                [w, b] = [p.detach().numpy() for p in ls.noise_policy.parameters()]
+                logging.info("parms [{:.2f} {:.2f}] {:.2f}".format(w[0][0], w[0][1], b[0]))
     formatting = 'Best Flips Med: {:.2f}, Best epoch: {}'
     text = formatting.format(best_median_flips,  best_epoch)
     logging.info(text)
@@ -51,14 +54,15 @@ def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
 def create_filenames(args):
     model_files = []
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs) + "_n" + str(args.n_train) + "_p_c"
+    basename += "_e" + str(args.epochs)
+    if args.train_noise:
+        basename += "tr_noise"
     if args.warm_up == 0:
          basename += "_no_wup"
     log_file = "logs/" + basename +  ".log"
-    model_file = "models/" + basename +  "score.pt"
-    #model_files.append("models/" + basename +  "_score.pt")
-    #model_files.append("models/" + basename +  "_p.pt")
-    return log_file, model_file
+    model_files.append("models/" + basename +  "_score.pt")
+    model_files.append("models/" + basename +  "_p.pt")
+    return log_file, model_files
 
 def main(args):
     if args.seed > -1:
@@ -67,8 +71,10 @@ def main(args):
     p = get_p(args.dir_path)
     print(p)
 
-    log_file, model_file = create_filenames(args)
-    print(log_file, model_file)
+    log_file, model_files = create_filenames(args)
+    print(log_file, model_files[0])
+    if args.train_noise:
+        print(model_files[1])
 
     logging.basicConfig(filename=log_file, level=logging.INFO)
 
@@ -82,13 +88,12 @@ def main(args):
 
     if args.warm_up > 0:
         train_warm_up(policy, noise_policy, optimizer, train_ds)
-    ls = WalkSATLN(policy, noise_policy, args.max_tries, args.max_flips, discount=args.discount, p=p)
+    ls = WalkSATLN(policy, noise_policy, args.train_noise, args.max_tries, args.max_flips, discount=args.discount, p=p)
     med_flips, mean_flips, accuracy = ls.evaluate(val_ds)
     to_log_eval(med_flips, mean_flips, accuracy, "EVAL No Train/ WarmUP")
     best_median_flips = np.median(med_flips)
 
-    train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_file)
-
+    train_policy(ls, optimizer, noise_optimizer, train_ds, val_ds, args, best_median_flips, model_files)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -103,5 +108,6 @@ if __name__ == '__main__':
     parser.add_argument('--discount', type=float, default=0.5)
     parser.add_argument('--warm_up', type=int, default=10)
     parser.add_argument('--n_train', type=int, default=1900)
+    parser.add_argument('--train_noise', type=bool, default=False)
     args = parser.parse_args()
     main(args)
