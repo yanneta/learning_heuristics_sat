@@ -280,16 +280,23 @@ class WalkSATLN(SATLearner):
             sats.append(sat)
         return np.median(all_flips),  np.mean(all_flips), np.array(sats).max()
 
+    def update_p(self):
+        self.noise_policy.eval()
+        x = np.array([0, 0])
+        x = torch.from_numpy(x[None,]).float()
+        self.p = self.noise_policy(x)[0][0].item()
+        
+
     def evaluate(self, data):
         med_flips = []
         mean_flips = []
         accuracy = []
         self.policy.eval()
-        #self.noise_policy.eval()
         self.model_np = model_to_numpy(self.policy)
+        if self.train_noise:
+            self.update_p()
         for i, f in enumerate(data):
             med_f, mean_f, solved = self.generate_episodes_eval(f)
-            #print(i, med_f, end="|")
             med_flips.append(med_f)
             mean_flips.append(mean_f)
             accuracy.append(solved)
