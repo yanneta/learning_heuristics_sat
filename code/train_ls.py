@@ -54,7 +54,7 @@ def train_warm_up(policy, noise_policy, optimizer, train_ds, max_flips=5000):
 def create_filenames(args):
     model_files = []
     basename = args.dir_path.replace("../", "").replace("/", "_") + "_d_" +  str(args.discount)
-    basename += "_e" + str(args.epochs)
+    basename += "_e" + str(args.epochs) + "_n_" + str(args.n_train)
     if args.train_noise:
         basename += "tr_noise"
     if args.warm_up == 0:
