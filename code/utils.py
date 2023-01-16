@@ -13,7 +13,7 @@ from pathlib import Path
 
 from cnf import CNF
 
-p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436}
+p_dict = {"domset":0.0693, "kclique":0.1218,  "kcolor":0.0895, "rand3sat":0.06436, "rand4sat":0.057}
 
 def model_to_numpy(model):
     parms = [p for p in model.parameters()]
