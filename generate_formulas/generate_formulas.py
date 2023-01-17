@@ -6,7 +6,11 @@ import pdb
 import subprocess
 
 
-def create_sat_problem(filename, call_list):
+def create_sat_problem(filename, call_list, call_minsat=True):
+    if not call_minsat:
+        subprocess.call(call_list)
+        os.rename('tmp.cnf', filename)
+        return
     while True:
         subprocess.call(call_list)
         try:
@@ -29,7 +33,7 @@ def generate_k_color(N, n, p, k, i0):
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'kcolor', str(k), 'gnp', str(n), str(p)]
         create_sat_problem(filename, call_list)
 
-def generate_randksat(N, k, n, m, i0):
+def generate_randksat(N, k, n, m, i0, call_minsat=True):
     """ 
     n number of variables
     m number of clauses
@@ -39,7 +43,8 @@ def generate_randksat(N, k, n, m, i0):
     for i in range(N):
         filename = 'ksat_k{}_n{}_m{}_{}.cnf'.format(k, n, m, i0+i)
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'randkcnf', str(k), str(n), str(m)]
-        create_sat_problem(filename, call_list)
+        print(filename)
+        create_sat_problem(filename, call_list, call_minsat)
 
 def generate_kclique(N, n, p, k, i0):
     """
@@ -63,6 +68,16 @@ def generate_domeset(N, n, p, k, i0):
     for i in range(N):
         filename = 'domset_k{}_n{}_p{}_{}.cnf'.format(k, n, p, i0+i)
         call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'domset', str(k), 'gnp', str(n), str(p)]
+        create_sat_problem(filename, call_list)
+
+def generate_matching(N, n, p, i0):
+    """
+    n number of nodes
+    p probability of an edge
+    """
+    for i in range(N):
+        filename = 'matching_n{}_p{}_{}.cnf'.format(n, p, i0+i)
+        call_list = ['cnfgen', '-q', '-o', 'tmp.cnf', 'matching', 'gnp', str(n), str(p)]
         create_sat_problem(filename, call_list)
 
 
@@ -102,7 +117,18 @@ def main():
         generate_kclique(N, 10, 0.1, 3, 0)
     if args.expr == "kclique/3-15-0.066/":
         generate_kclique(N, 15, 0.066, 3, 0)
-        
+       
+    if args.expr == "rand4sat/30-292/":
+        generate_randksat(N, 4, 30, 292, 0)
+    if args.expr == "rand4sat/40-390/":
+        generate_randksat(N, 4, 40, 390, 0)
+    if args.expr == "rand4sat/50-487/":
+        generate_randksat(N, 4, 50, 487, 0)
+    if args.expr == "rand4sat/100-975/":
+        generate_randksat(100, 4, 100, 975, 0, call_minsat=False)
+    if args.expr == "rand4sat/200-1950/":
+        generate_randksat(100, 4, 200, 1950, 0, call_minsat=False)
+
     # random k-SAT experiments
     if args.expr == "rand3sat/5-21/":
         generate_randksat(N, 3, 5, 21, 0)
@@ -111,7 +137,7 @@ def main():
     if args.expr == "rand3sat/25-106/":
         generate_randksat(N, 3, 25, 106, 0)
     if args.expr == "rand3sat/50-213/":
-        generate_randksat(N, 3, 50, 213, 0)
+        generate_randksat(700, 3, 50, 213, 2000)
     if args.expr == "rand3sat/75-320/":
         generate_randksat(N, 3, 75, 320, 0)
     if args.expr == "rand3sat/100-426/":
@@ -121,7 +147,9 @@ def main():
     if args.expr == "rand3sat/150-639":
         generate_randksat(N, 3, 150, 639, 0)
     if args.expr == "rand3sat/500-2130/":
-        generate_randksat(100, 3, 500, 2130, 0)
+        generate_randksat(100, 3, 500, 2130, 0, call_minsat=False)
+    if args.expr == "rand3sat/300-1278/":
+        generate_randksat(100, 3, 300, 1278, 0, call_minsat=False)
 
     # kcolor experiments
     if args.expr == "kcolor/3-5-0.5/":
