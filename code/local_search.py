@@ -106,12 +106,12 @@ class SATLearner:
         p = self.noise_policy(x)
         m = Bernoulli(p)
         sample = m.sample()
-        print(self.flips, p.item(), self.steps_since_improv)
+        #print(self.flips, p.item(), self.steps_since_improv)
         return sample[0], m.log_prob(sample)[0]
 
     def select_literal_eval(self, f, list_literals):
-        #sample = int(random.random() < self.p)
-        sample, _ = self.sample_estimate_p(f)
+        sample = int(random.random() < self.p)
+        #sample, _ = self.sample_estimate_p(f)
         if sample == 1:
             literal = random.choice(list_literals)
         else:
@@ -199,12 +199,6 @@ class WalkSATLN(SATLearner):
         while self.flips < self.max_flips:
             unsat_clause_indices = [k for k in range(len(f.clauses)) if self.true_lit_count[k] == 0]
             sat = not unsat_clause_indices
-            if self.train_noise:
-                if num_unsat_clauses > len(unsat_clause_indices):
-                    self.steps_since_improv = 0
-                    num_unsat_clauses = len(unsat_clause_indices)
-                else:
-                    self.steps_since_improv += 1
             if sat:
                 break
             self.flips += 1
